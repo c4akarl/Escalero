@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/button_margin"
+    android:layout_marginLeft="@dimen/button_margin"
+    android:layout_marginEnd="@dimen/button_margin"
+    android:layout_marginRight="@dimen/button_margin"
+    android:layout_marginTop="@dimen/activity_vertical_margin"
+    android:layout_marginBottom="@dimen/activity_vertical_margin"
+    android:background="@color/colorBlack">
+
+    <ImageView
+        android:id="@+id/escaleroIcon"
+        android:src="@drawable/icon_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_0"
+        android:layout_marginBottom="@dimen/margin_0"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true" />
+    <ImageView
+        android:id="@+id/gamesIcon"
+        android:src="@drawable/icon_firebase"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_0"
+        android:layout_marginBottom="@dimen/margin_0"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true" />
+    <TextView
+        android:id="@+id/matchTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@+id/escaleroIcon"
+        android:layout_toLeftOf="@+id/gamesIcon"
+        android:gravity="center_horizontal"
+        android:textColor="@color/colorDiceB"
+        android:textSize="36dp"
+        android:text="@string/appLabel" />
+
+    <TextView
+        android:id="@+id/mes2Title"
+        android:layout_below="@id/matchTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size_16"
+        android:text="@string/gameOver" />
+
+    <TextView
+        android:id="@+id/playerNames"
+        android:layout_below="@id/mes2Title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size_16" />
+    <TextView
+        android:id="@+id/playerResult"
+        android:layout_below="@id/playerNames"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size_16" />
+
+    <LinearLayout
+        android:id="@+id/playerA"
+        android:layout_below="@id/playerResult"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:weightSum="9"
+        android:orientation="horizontal" >
+        <TextView
+            android:id="@+id/playerNameA"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="4"
+            android:layout_marginLeft="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+        <TextView
+            android:id="@+id/playerEpOldA"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+        <TextView
+            android:id="@+id/playerResultA"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="0dp"
+            android:gravity="right"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+        <TextView
+            android:id="@+id/isA"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16"
+            android:text=" = " />
+        <TextView
+            android:id="@+id/playerEpNewA"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:layout_marginRight="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/playerB"
+        android:layout_below="@id/playerA"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:weightSum="9"
+        android:orientation="horizontal" >
+        <TextView
+            android:id="@+id/playerNameB"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="4"
+            android:layout_marginLeft="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+        <TextView
+            android:id="@+id/playerEpOldB"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+        <TextView
+            android:id="@+id/playerResultB"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="0dp"
+            android:gravity="right"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+        <TextView
+            android:id="@+id/isB"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16"
+            android:text=" = " />
+        <TextView
+            android:id="@+id/playerEpNewB"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:layout_marginRight="0dp"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/matchFee"
+        android:layout_below="@id/playerB"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size_16"
+        android:text="@string/matchFee" />
+
+    <TextView
+        android:id="@+id/rematchInfo"
+        android:layout_below="@id/matchFee"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
+        android:layout_marginBottom="@dimen/activity_vertical_margin"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size_16"
+        android:text="@string/rematch" />
+
+    <LinearLayout
+        android:id="@+id/actions"
+        android:layout_below="@id/rematchInfo"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:weightSum="2"
+        android:orientation="horizontal" >
+        <TextView
+            android:id="@+id/action1"
+            style="@style/c4aTV4"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_height"
+            android:layout_weight="1"
+            android:layout_marginLeft="0dp"
+            android:background="@drawable/rectangleyellow"
+            android:textSize="@dimen/text_size_16"
+            android:text="@string/dialogNo" />
+        <TextView
+            android:id="@+id/action2"
+            style="@style/c4aTV4"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_height"
+            android:layout_weight="1"
+            android:layout_marginRight="0dp"
+            android:background="@drawable/rectangleyellow"
+            android:textSize="@dimen/text_size_16"
+            android:text="@string/dialogYes" />
+    </LinearLayout>
+
+</RelativeLayout>

@@ -1,0 +1,126 @@
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/colorBlack">
+
+    <LinearLayout
+        android:id="@+id/playerActions"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:weightSum="3"
+        android:orientation="horizontal" >
+        <TextView
+            android:id="@+id/playerOnline"
+            style="@style/c4aTV4"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_height"
+            android:layout_weight="1"
+            android:background="@drawable/rectangleyellow"
+            android:maxLines="1"
+            android:textSize="@dimen/text_size_16"
+            android:text="@string/online" />
+        <TextView
+            android:id="@+id/playerOftenActive"
+            style="@style/c4aTV4"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_height"
+            android:layout_weight="1"
+            android:background="@drawable/rectangleyellow"
+            android:maxLines="1"
+            android:textSize="@dimen/text_size_16"
+            android:text="@string/oftenActive" />
+        <TextView
+            android:id="@+id/playerLeaderboard"
+            style="@style/c4aTV4"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/tv_height"
+            android:layout_weight="1"
+            android:background="@drawable/rectangleyellow"
+            android:maxLines="2"
+            android:textSize="@dimen/text_size_16" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/sep0"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_below="@id/playerActions"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:background="@color/colorHoldNewGame"/>
+
+    <LinearLayout
+        android:id="@+id/bottomActions"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:weightSum="2"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal" >
+        <TextView
+            android:id="@+id/btnQuickMatch"
+            style="@style/c4aTV4"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/view_horizontal_margin_30"
+            android:background="@drawable/rectangleyellow"
+            android:textSize="@dimen/text_size_16"
+            android:layout_marginBottom="@dimen/view_vertical_margin"
+            android:text="@string/quickMatch" />
+        <TextView
+            android:id="@+id/btnOk"
+            style="@style/c4aTV4"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/view_horizontal_margin_30"
+            android:background="@drawable/rectangleyellow"
+            android:textSize="@dimen/text_size_16"
+            android:layout_marginBottom="@dimen/view_vertical_margin"
+            android:text="@string/back" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/lbMes"
+        style="@style/c4aTV4"
+        android:layout_above="@id/bottomActions"
+        android:layout_width="fill_parent"
+        android:layout_height="@dimen/view_horizontal_margin_30"
+        android:textSize="@dimen/text_size_16"
+        android:layout_marginBottom="@dimen/view_vertical_margin"
+        android:layout_marginLeft="0dp"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:textColor="@color/colorHold"
+        android:text="" />
+
+    <View
+        android:id="@+id/sep1"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_above="@id/lbMes"
+        android:layout_marginTop="@dimen/margin_1"
+        android:layout_marginBottom="@dimen/margin_1"
+        android:background="@color/colorHoldNewGame"/>
+
+    <ListView android:id="@+id/leaderboardListView"
+        android:layout_below="@id/sep0"
+        android:layout_above="@id/sep1"
+        android:layout_marginTop="1dip"
+        android:layout_marginBottom="0dip"
+        android:layout_marginLeft="0dip"
+        android:layout_marginRight="0dip"
+        android:background="@color/lv_background"
+        android:divider="@color/colorDiceB"
+        android:dividerHeight="1sp"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+    <TextView
+        android:id="@+id/leaderboardEmpty"
+        style="@style/c4aTV4"
+        android:text="@string/dataLoading"
+        android:layout_below="@id/sep0"
+        android:layout_above="@id/sep1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:textColor="@color/text_yellow"
+        android:textSize="@dimen/text_size"
+        android:gravity="center" />
+
+</RelativeLayout>

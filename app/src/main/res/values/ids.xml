@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_id" translatable="false">875550146406</string>
+    <string name="web_client_id" translatable="false">875550146406-tjj3i7fvrh1s6ned8km6hbpl7a73j0c8.apps.googleusercontent.com</string>
+    <item type="id" name="dbRoll_1" />
+    <item type="id" name="dbRoll_2" />
+    <item type="id" name="dbRoll_3" />
+    <item type="id" name="dbRoll_4" />
+    <item type="id" name="dbRoll_5" />
+    <item type="id" name="dbHold_1" />
+    <item type="id" name="dbHold_2" />
+    <item type="id" name="dbHold_3" />
+    <item type="id" name="dbHold_4" />
+    <item type="id" name="dbHold_5" />
+    <item type="id" name="dbHoldFast" />
+    <item type="id" name="dbDouble_1" />
+    <item type="id" name="dbDouble_2" />
+    <item type="id" name="dbDouble_3" />
+    <item type="id" name="dbDouble_4" />
+    <item type="id" name="dbDouble_5" />
+    <item type="id" name="dbD1" />
+    <item type="id" name="dbPlayerInfo" />
+    <item type="id" name="dbPlayerInfoDouble1" />
+    <item type="id" name="dbCancel" />
+</resources>

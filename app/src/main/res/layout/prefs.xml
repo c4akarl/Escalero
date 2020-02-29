@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+    android:background="@color/colorPrefs"
+	android:paddingTop="8dip"
+	android:paddingLeft="8dip"
+    android:paddingRight="8dip"
+    android:paddingBottom="@dimen/view_horizontal_margin_12" >
+
+    <CheckBox
+        android:id="@+id/cbNewGame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="@style/c4aCB2"
+        android:text="@string/newGame"
+        android:layout_marginLeft="25dip"
+        android:layout_marginBottom="6dip"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentBottom="true"/>
+    <ImageView
+        android:id="@+id/btnOk"
+        android:src="@drawable/button_ok"
+        android:onClick="myClickHandler"
+        android:layout_toRightOf="@id/cbNewGame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="25dip"
+        android:layout_marginRight="25dip"
+        android:layout_marginBottom="6dip"
+        android:layout_alignParentBottom="true"/>
+
+    <TextView
+        android:id="@+id/line4"
+        android:layout_above="@id/btnOk"
+        android:layout_width="fill_parent"
+        android:layout_height="2dp"
+        android:layout_marginBottom="@dimen/activity_vertical_margin"
+        android:background="@color/colorDialogButton"/>
+
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_alignParentTop="true"
+        android:layout_above="@id/line4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true" >
+
+        <HorizontalScrollView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/horizontalScrollView" >
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" >
+
+            <TextView
+                android:id="@+id/prefsDice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="@color/colorLastEntry"
+                android:text="@string/prefsDice"/>
+
+            <RadioGroup
+                android:id="@+id/rgDice"
+                android:layout_below="@id/prefsDice"
+                android:layout_alignParentLeft="true"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rbDiceAutomatic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/diceAutomatic" />
+                <RadioButton
+                    android:id="@+id/rbDiceManuel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/view_horizontal_margin_30"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/diceManual" />
+            </RadioGroup>
+
+            <RadioGroup
+                android:id="@+id/rgDimension"
+                android:layout_below="@id/rgDice"
+                android:layout_alignParentLeft="true"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rbDimension2D"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/dimension2D" />
+                <RadioButton
+                    android:id="@+id/rbDimension3D"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/view_horizontal_margin_30"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/dimension3D" />
+            </RadioGroup>
+
+            <RadioGroup
+                android:id="@+id/rgSize"
+                android:layout_below="@id/rgDimension"
+                android:layout_alignParentLeft="true"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rbSizeSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/diceSizeSmall" />
+                <RadioButton
+                    android:id="@+id/rbSizeMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/view_horizontal_margin_30"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/diceSizeMedium" />
+                <RadioButton
+                    android:id="@+id/rbSizeLarge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/view_horizontal_margin_30"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/diceSizeLarge" />
+            </RadioGroup>
+
+            <ImageView
+                android:id="@+id/dice_icon_1"
+                android:layout_below="@id/rgSize"
+                android:onClick="myClickHandler"
+                android:src="@drawable/_1_4"
+                android:layout_alignParentLeft="true"
+                android:background="@color/colorDiceA"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_12" />
+            <ImageView
+                android:id="@+id/dice_icon_2"
+                android:layout_below="@id/rgSize"
+                android:onClick="myClickHandler"
+                android:src="@drawable/_2_4"
+                android:layout_toRightOf="@id/dice_icon_1"
+                android:background="@color/colorDiceA"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_12" />
+            <ImageView
+                android:id="@+id/dice_icon_3"
+                android:layout_below="@id/rgSize"
+                android:onClick="myClickHandler"
+                android:src="@drawable/_3_4"
+                android:layout_toRightOf="@id/dice_icon_2"
+                android:background="@color/colorDiceA"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_12" />
+
+            <TextView
+                android:id="@+id/prefsAcounting"
+                android:layout_below="@id/dice_icon_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_margin_10"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="@color/colorLastEntry"
+                android:text="@string/prefsAcounting"/>
+
+            <TextView
+                android:id="@+id/pointsText"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="@string/pointsColumn"/>
+            <TextView
+                android:id="@+id/col1Text"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/pointsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="1:"/>
+            <EditText
+                android:id="@+id/col1"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/col1Text"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="2dip"
+                android:layout_marginRight="2dip"
+                android:textCursorDrawable="@null"
+                android:inputType="number"
+                android:maxLength="1" />
+            <TextView
+                android:id="@+id/col2Text"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/col1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="2:"/>
+            <EditText
+                android:id="@+id/col2"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/col2Text"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="2dip"
+                android:layout_marginRight="2dip"
+                android:textCursorDrawable="@null"
+                android:inputType="number"
+                android:maxLength="1" />
+            <TextView
+                android:id="@+id/col3Text"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/col2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="3:"/>
+            <EditText
+                android:id="@+id/col3"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/col3Text"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="2dip"
+                android:layout_marginRight="2dip"
+                android:textCursorDrawable="@null"
+                android:inputType="number"
+                android:maxLength="1" />
+            <TextView
+                android:id="@+id/bonText"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/col3"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="B:"/>
+            <EditText
+                android:id="@+id/bon"
+                android:layout_below="@id/prefsAcounting"
+                android:layout_toRightOf="@id/bonText"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="2dip"
+                android:layout_marginRight="2dip"
+                android:textCursorDrawable="@null"
+                android:inputType="number"
+                android:maxLength="1" />
+
+            <TextView
+                android:id="@+id/multiplierText"
+                android:layout_below="@id/pointsText"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="@string/payoutMultiplier"/>
+            <EditText
+                android:id="@+id/multiplier"
+                android:layout_below="@id/pointsText"
+                android:layout_toRightOf="@id/multiplierText"
+                android:layout_width="60dp"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="5dip"
+                android:textCursorDrawable="@null"
+                android:inputType="number"
+                android:maxLength="4" />
+
+            <TextView
+                android:id="@+id/unitText"
+                android:layout_below="@id/multiplierText"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="@string/unit"/>
+            <EditText
+                android:id="@+id/unit"
+                android:layout_below="@id/multiplierText"
+                android:layout_toRightOf="@id/unitText"
+                android:layout_width="100dp"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="5dip"
+                android:textCursorDrawable="@null"
+                android:maxLength="8" />
+
+            <TextView
+                android:id="@+id/bonusServedText"
+                android:layout_below="@id/unitText"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="@string/bonusServed"/>
+            <EditText
+                android:id="@+id/bonusServed"
+                android:layout_below="@id/unitText"
+                android:layout_toRightOf="@id/bonusServedText"
+                android:layout_width="40dp"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="5dip"
+                android:textCursorDrawable="@null"
+                android:inputType="number"
+                android:maxLength="2" />
+
+            <TextView
+                android:id="@+id/bonusServedGrandeText"
+                android:layout_below="@id/bonusServedText"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="#e5e19e"
+                android:text="@string/bonusServedGrande"/>
+            <EditText
+                android:id="@+id/bonusServedGrande"
+                android:layout_below="@id/bonusServedText"
+                android:layout_toRightOf="@id/bonusServedGrandeText"
+                android:layout_width="40dp"
+                android:layout_marginTop="@dimen/view_horizontal_margin"
+                style="@style/c4aET1"
+                android:layout_marginLeft="5dip"
+                android:textCursorDrawable="@null"
+                android:inputType="number"
+                android:maxLength="2" />
+
+            <TextView
+                android:id="@+id/prefsOther"
+                android:layout_below="@id/bonusServedGrande"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/view_margin_10"
+                style="@style/c4aTV1"
+                android:layout_marginLeft="2dip"
+                android:textColor="@color/colorLastEntry"
+                android:text="@string/prefsOther"/>
+
+            <RadioGroup
+                android:id="@+id/rgAccounting"
+                android:layout_below="@id/prefsOther"
+                android:layout_alignParentLeft="true"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rbAccountingColumns"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/columns" />
+                <RadioButton
+                    android:id="@+id/rbAccountingPlayer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/view_horizontal_margin_30"
+                    style="@style/c4aRB2"
+                    android:onClick="onRadioButtonClicked"
+                    android:text="@string/player" />
+            </RadioGroup>
+
+            <CheckBox
+                android:id="@+id/cbSummation"
+                android:layout_below="@id/rgAccounting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/c4aCB2"
+                android:text="@string/summation" />
+
+            <CheckBox
+                android:id="@+id/cbSounds"
+                android:layout_below="@id/cbSummation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/c4aCB2"
+                android:text="@string/sounds" />
+
+            <CheckBox
+                android:id="@+id/cbFlipScreen"
+                android:layout_below="@id/cbSounds"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/c4aCB2"
+                android:text="@string/flipScreen" />
+
+            <CheckBox
+                android:id="@+id/cbLogging"
+                android:layout_below="@id/cbFlipScreen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/c4aCB2"
+                android:text="@string/logging" />
+
+            <CheckBox
+                android:id="@+id/cbMainDialog"
+                android:layout_below="@id/cbLogging"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/c4aCB2"
+                android:text="@string/mainDialog" />
+
+            <CheckBox
+                android:id="@+id/cbAdvertising"
+                android:layout_below="@id/cbMainDialog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/c4aCB2"
+                android:text="@string/advertising" />
+
+            </RelativeLayout>
+
+        </HorizontalScrollView>
+
+    </ScrollView>
+
+</RelativeLayout>

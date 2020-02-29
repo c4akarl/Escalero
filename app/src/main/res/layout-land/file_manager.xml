@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/colorPrefs"
+    android:paddingTop="@dimen/view_horizontal_margin_4"
+    android:paddingBottom="@dimen/view_horizontal_margin_4"
+    android:paddingLeft="@dimen/view_horizontal_margin_4"
+    android:paddingRight="@dimen/view_horizontal_margin_4"
+    android:orientation="vertical" >
+
+    <ImageView
+        android:id="@+id/btnOk"
+        android:src="@drawable/button_ok"
+        android:onClick="myClickHandler"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true" />
+    <ImageView
+        android:id="@+id/btnList"
+        android:src="@drawable/button_list"
+        android:onClick="myClickHandler"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@id/btnOk"
+        android:layout_marginRight="@dimen/view_horizontal_margin_30"
+        android:layout_alignParentBottom="true" />
+    <TextView
+        android:id="@+id/tvSaveGame"
+        style="@style/c4aTV1"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@color/colorWhite"
+        android:layout_alignTop="@id/btnOk"
+        android:layout_toLeftOf="@id/btnOk"
+        android:layout_marginRight="3dip"
+        android:layout_marginBottom="7dip"
+        android:gravity="center_vertical"
+        android:maxLines="1"
+        android:paddingLeft="7dip"
+        android:paddingRight="3dip" />
+
+    <LinearLayout
+        android:id="@+id/pane1"
+        android:layout_above="@id/btnOk"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2" >
+
+        <RelativeLayout
+            android:id="@+id/pane1a"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_marginLeft="@dimen/view_horizontal_margin_4"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+            <EditText
+                android:id="@+id/etPath"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                style="@style/c4aET1" />
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/pane1b"
+            android:layout_toRightOf="@id/pane1a"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_marginLeft="@dimen/view_horizontal_margin_4"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+            <ImageView
+                android:id="@+id/btnDirBack"
+                android:src="@drawable/button_arrow_left"
+                android:onClick="myClickHandler"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:layout_marginBottom="1dp"
+                android:layout_alignParentRight="true" />
+            <TextView
+                android:id="@+id/tvFile"
+                style="@style/c4aTV1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:text="@string/file" />
+            <EditText
+                android:id="@+id/etFile"
+                style="@style/c4aET1"
+                android:layout_toLeftOf="@id/btnDirBack"
+                android:layout_toRightOf="@id/tvFile"
+                android:paddingRight="0dip"
+                android:layout_marginRight="3dip"
+                android:maxLines="1" />
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/lvFiles"
+        android:layout_alignParentTop="true"
+        android:layout_above="@id/pane1"
+        android:layout_marginTop="4dip"
+        android:layout_marginBottom="2dip"
+        android:background="@color/lv_background"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+    <ListView
+        android:id="@+id/lvGames"
+        android:layout_alignParentTop="true"
+        android:layout_above="@id/pane1"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:background="@color/lv_background"
+        android:choiceMode="singleChoice"
+        android:visibility="invisible" />
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="invisible"
+        android:textSize="36sp"
+        android:textColor="@color/colorPlayerAS"
+        android:text="@string/noResults" />
+
+</RelativeLayout>

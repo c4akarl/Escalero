@@ -1,0 +1,81 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorTableStroke</item>
+    </style>
+
+    <style name="c4aTV1" parent="@android:style/Widget.TextView">
+        <item name="android:layout_marginTop">11dip</item>
+        <item name="android:layout_marginLeft">5dip</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#ffda7b</item>
+    </style>
+    <style name="c4aTV4" parent="@android:style/Widget.TextView">
+        <item name="android:textSize">@dimen/text_size_20</item>
+        <item name="android:textColor">#000000</item>
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">@dimen/tv_height</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:layout_marginLeft">@dimen/view_horizontal_margin</item>
+        <item name="android:layout_marginRight">@dimen/view_horizontal_margin</item>
+        <item name="android:layout_marginTop">@dimen/view_horizontal_margin</item>
+        <item name="android:layout_marginBottom">@dimen/view_horizontal_margin</item>
+        <item name="android:paddingLeft">2dp</item>
+        <item name="android:paddingRight">2dp</item>
+    </style>
+    <style name="c4aET1" parent="@android:style/Widget.EditText">
+        <item name="android:layout_marginLeft">5dip</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dip</item>
+        <item name="android:paddingLeft">3dip</item>
+        <item name="android:paddingRight">3dip</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:background">@drawable/bordergreen</item>
+        <item name="android:textColor">#000000</item>
+    </style>
+    <style name="c4aRB1" parent="@android:style/Widget.CompoundButton.RadioButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingLeft">@dimen/paddingLeft_radioButton</item>
+        <item name="android:layout_marginBottom">1dip</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#e5e19e</item>
+    </style>
+    <style name="c4aCB1" parent="@android:style/Widget.CompoundButton.CheckBox">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingLeft">@dimen/paddingLeft_radioButton</item>
+        <item name="android:layout_marginBottom">1dip</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#e5e19e</item>
+    </style>
+
+    <style name="c4aRB2" parent="@android:style/Widget.CompoundButton.RadioButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingLeft">@dimen/paddingLeft_radioButton</item>
+        <item name="android:layout_marginBottom">1dip</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#e5e19e</item>
+        <item name="android:button">@drawable/icon_circle</item>
+    </style>
+    <style name="c4aCB2" parent="@android:style/Widget.CompoundButton.CheckBox">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingLeft">@dimen/paddingLeft_radioButton</item>
+        <item name="android:layout_marginBottom">1dip</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#e5e19e</item>
+        <item name="android:button">@drawable/icon_cb</item>
+    </style>
+
+</resources>

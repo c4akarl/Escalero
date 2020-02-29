@@ -44,6 +44,7 @@ import android.view.View
 import android.view.Window
 import android.widget.*
 import androidx.annotation.NonNull
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -60,6 +61,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.database.*
@@ -106,7 +108,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //            Log.d(TAG, "onRewarded! type: ${reward.type}, amount: ${reward.amount}")
 
-            if (prefs.getBoolean("playOnline", true)) {
+            if (prefs.getBoolean("playOnline", false)) {
                 getEpFromAds()
             }
 
@@ -174,7 +176,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //                Log.d(TAG, "loadInterstitialAd(), onAdClosed(), adsType: $adsType")
 
-                if (prefs.getBoolean("playOnline", true)) {
+                if (prefs.getBoolean("playOnline", false)) {
                     if (!(isAdsSelected && adsStartTime != 0L && System.currentTimeMillis() - adsStartTime >= ONLINE_ADS_MIN_TIME))
                         isAdsSelected = false
 
@@ -324,7 +326,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 return
             if (ed.isGameOver)
                 return
-            if (prefs.getBoolean("playOnline", true))
+            if (prefs.getBoolean("playOnline", false))
                 return
 
             val strSp = engineCommand.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -412,7 +414,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                             stopEngine = false
                         }
 
-                        if (!prefs.getBoolean("playOnline", true))
+                        if (!prefs.getBoolean("playOnline", false))
                             setRunPrefs()
 
                     }
@@ -517,6 +519,8 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     private var diceTime = LongArray(5)
     private var diceAnimate = IntArray(5)
 
+    private var startDelayTime: Long = 0
+
     private var isDicing = false
     private var isDiced = false
     private var isServed = false
@@ -534,6 +538,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     //ONLINE - variables
     private var mGoogleSignInClient: GoogleSignInClient? = null
     private lateinit var mAuthFirebase: FirebaseAuth
+    private lateinit var firebaseAnalytics: FirebaseAnalytics
 
     private lateinit var refQickMatch: DatabaseReference
     private var refQickMatchListener: ValueEventListener? = null
@@ -587,6 +592,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     private var matchCheckAll = false
 
     private lateinit var dialogPlayerQuery: Dialog
+    private var isShowingPlayerQuery = false
     private lateinit var userListArray: ArrayList<UserList>
 
     private lateinit var dialogPlayOnline: Dialog
@@ -765,7 +771,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 try {
 
-                    if (!prefs.getBoolean("playOnline", true)) {
+                    if (!prefs.getBoolean("playOnline", false)) {
                         refMatch!!.removeEventListener(refMatchListener!!)
                         return
                     }
@@ -828,7 +834,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //                                            Log.i(TAG, "matchUpdateListener(), userMatches")
 
-                                            //karl??? Abbruch ZL10 && Huawei    kotlin.KotlinNullPointerException
                                             val players = "${checkBaseData.nameA!!} - ${checkBaseData.nameB!!}"
                                             var variant = getString(R.string.typeSingle)
                                             if (!checkBaseData.singleGame!!)
@@ -909,7 +914,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     if (dialogQuickMatchInvitation.isShowing)
                         dialogQuickMatchInvitation.dismiss()
 
-                    if (!prefs.getBoolean("playOnline", true)) {
+                    if (!prefs.getBoolean("playOnline", false)) {
                         refQickMatch.removeEventListener(refQickMatchListener!!)
                         return
                     }
@@ -1449,6 +1454,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
 
         mAuthFirebase = FirebaseAuth.getInstance()
+        firebaseAnalytics = FirebaseAnalytics.getInstance(this)
 
         if (!isInitAds) {
             isInitAds = true
@@ -1486,6 +1492,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     public override fun onResume() {
         super.onResume()
         engineIsRunning = false
@@ -1534,14 +1541,14 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         }
 
         if (runPrefs.getBoolean("isAppStart", true)) {
-            if (prefs.getBoolean("playOnline", true))
+            if (prefs.getBoolean("playOnline", false))
                 playOnline(runPrefs.getBoolean("isAppStart", true))
             else
                 playOffline(false)
             setAppStart(false)
         }
         else {
-            if (prefs.getBoolean("playOnline", true)) {
+            if (prefs.getBoolean("playOnline", false)) {
                 signInSilently()
             }
         }
@@ -1561,7 +1568,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //                Log.i(TAG, "onResume(), myReceiver(), actionId: $actionId, matchId: $matchId, fromUsername: $fromUsername")
 
-                if (prefs.getBoolean("playOnline", true) && actionId != "null") {
+                if (prefs.getBoolean("playOnline", false) && actionId != "null") {
                     if (isOnlineActive && !(actionId == "8" || actionId == "9")) {
 
 //                        Log.i(TAG, "onResume(), myReceiver(), !!! isOnlineActive !!!, actionId: $actionId, matchId: $matchId, fromUserId: $fromUserId")
@@ -1655,7 +1662,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.i(TAG, "onPause(), isGameOver: " + ed.isGameOver)
 
-        if (!prefs.getBoolean("playOnline", true))
+        if (!prefs.getBoolean("playOnline", false))
             setRunPrefs()
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver)
@@ -1679,7 +1686,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         setContentView(R.layout.activity_main)
         setUI()
 
-        if (prefs.getBoolean("playOnline", true) && isOnlineEntry) {
+        if (prefs.getBoolean("playOnline", false) && isOnlineEntry) {
             btnPlayerRound.visibility = ImageView.INVISIBLE
             btnDice.visibility = ImageView.VISIBLE
             btnDice.setImageResource(R.drawable.button_ok)
@@ -1693,6 +1700,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             dialogPlayerQuery.setContentView(R.layout.dialogplayerquery)
             showPlayerQuery()
         }
+
     }
 
     override fun onBackPressed() {
@@ -1711,7 +1719,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         handlerEngine.removeCallbacks(mUpdateEngine)
         handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
 
-        if (!prefs.getBoolean("playOnline", true))
+        if (!prefs.getBoolean("playOnline", false))
             setRunPrefs()
 
     }
@@ -1949,14 +1957,14 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             R.id.btnMenu -> if (isDicing)
                 playSound(1, 0)
             else {
-                if (prefs.getBoolean("playOnline", true))
+                if (prefs.getBoolean("playOnline", false))
                     showMenuOnline()
                 else
                     showMenuOffline()
             }
 
             R.id.doubleA -> {
-                if (prefs.getBoolean("playOnline", true) && isOnlineActive && !isDoingTurn) {
+                if (prefs.getBoolean("playOnline", false) && isOnlineActive && !isDoingTurn) {
                     Toast.makeText(applicationContext, getString(R.string.notYourTurn), Toast.LENGTH_SHORT).show()
                     return
                 }
@@ -2003,19 +2011,27 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 radio5.visibility = ImageView.INVISIBLE
             }
         }
-        if (!prefs.getBoolean("playOnline", true))
+        if (!prefs.getBoolean("playOnline", false))
             setRunPrefs()
+    }
+
+    private fun isTouchDelayOk(): Boolean {
+        var isOk = false
+        if (System.currentTimeMillis() - startDelayTime >= MIN_BTN_DELAY)
+            isOk = true
+        startDelayTime = System.currentTimeMillis()
+        return isOk
     }
 
     private fun btnDiceClicked() {
 
 //        Log.i(TAG, "1 btnDiceClicked(), isOnlineEntry: $isOnlineEntry, ed.isGameOver: ${ed.isGameOver}")
 
-        if (prefs.getBoolean("playOnline", true) && isOnlineActive && !isDoingTurn) {
+        if (prefs.getBoolean("playOnline", false) && isOnlineActive && !isDoingTurn) {
             return
         }
 
-        if (prefs.getBoolean("playOnline", true) && !isOnlineActive) {
+        if (prefs.getBoolean("playOnline", false) && !isOnlineActive) {
             showPlayOnlineDialog()
             return
         }
@@ -2054,7 +2070,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             Toast.makeText(applicationContext, getString(R.string.isStopped), Toast.LENGTH_SHORT).show()
             stopEngine = true
 
-            if (!prefs.getBoolean("playOnline", true))
+            if (!prefs.getBoolean("playOnline", false))
                 setRunPrefs()
             return
         }
@@ -2070,7 +2086,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 setSelectedItem(-1)
                 computeFlipScreen(false)
 
-                if (!prefs.getBoolean("playOnline", true))
+                if (!prefs.getBoolean("playOnline", false))
                     setRunPrefs()
                 return
             }
@@ -2128,7 +2144,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     override fun onTouch(view: View, event: MotionEvent): Boolean {
         onTouchEvent(event)
-        if (prefs.getBoolean("playOnline", true) && isOnlineActive && !isDoingTurn) {
+        if (prefs.getBoolean("playOnline", false) && isOnlineActive && !isDoingTurn) {
             if (        view.id == R.id.btnDice
                     ||  view.id == R.id.diceBoard
                     ||  view.id == R.id.diceA_1
@@ -2157,13 +2173,13 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     R.id.diceA_5 -> setDiceValues(4)
                 }
 
-                if (prefs.getBoolean("playOnline", true) && isOnlineActive && isDoingTurn) {
+                if (prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn) {
                     matchDataToDb(false, ONLINE_ACTIVE)
                 }
 
             }
 
-            if (prefs.getBoolean("playOnline", true) && diceModus == 1 && isOnlineActive && isDoingTurn) {
+            if (prefs.getBoolean("playOnline", false) && diceModus == 1 && isOnlineActive && isDoingTurn) {
 
                 if (mPlayerABC != null) {
                     val nPlayer = ed.getNextPlayerAB(ed.playerStart)
@@ -2181,7 +2197,8 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             }
 
             if (view.id == R.id.btnDice) {
-                btnDiceClicked()
+                if (isTouchDelayOk())
+                    btnDiceClicked()
                 return true
             }
 
@@ -2212,7 +2229,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                         return true
                     }
 
-                    if (prefs.getBoolean("playOnline", true) && isOnlineActive && !isDoingTurn) {
+                    if (prefs.getBoolean("playOnline", false) && isOnlineActive && !isDoingTurn) {
                         Toast.makeText(applicationContext, getString(R.string.notYourTurn), Toast.LENGTH_SHORT).show()
                         return true
                     }
@@ -2231,7 +2248,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //                        Log.i(TAG, "onTouch(), isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn, isOnlineEntry: $isOnlineEntry")
 
-                        if (prefs.getBoolean("playOnline", true) && isOnlineActive && isDoingTurn && isOnlineEntry) {
+                        if (prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn && isOnlineEntry) {
                             isOnlineEntry = false
                             matchDataToDb(false, ONLINE_ACTIVE_ENTRY_STORNO)
                         }
@@ -2291,7 +2308,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     }
                     // flip screen
                     if (gridId == "X01") {
-                        if (prefs.getBoolean("playOnline", true)) {
+                        if (prefs.getBoolean("playOnline", false)) {
                             ed.isFlipScreen = false
                             isOrientationReverse = false
                             Toast.makeText(applicationContext, getString(R.string.flipDisabled), Toast.LENGTH_SHORT).show()
@@ -2366,7 +2383,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     // accounting
                     if (gridId == "X03") {
 
-                        if (!prefs.getBoolean("playOnline", true))
+                        if (!prefs.getBoolean("playOnline", false))
                             showAccountingDialog(ed.accounting)
                         else {
                             if (isOnlineActive) {
@@ -2379,7 +2396,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                 }
                             }
                             else {
-                                if (!showAds())
+                                if (!showAds(ADS_SELECTED_FROM_TABLE))
                                     showPlayOnlineDialog()
                             }
                         }
@@ -2428,7 +2445,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
                     if (isUpdated) {
 
-                        if (!prefs.getBoolean("playOnline", true))
+                        if (!prefs.getBoolean("playOnline", false))
                             performEngineEntryCommand("entry $playerId $col $row $result")
                         updateValues(position)
                         if (isDiceBoard) {
@@ -2461,7 +2478,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //                    Log.i(TAG, "4 onTouch(), isUpdateTable: $isUpdateTable, diceModus: $diceModus")
 
-                    if (isUpdateTable && prefs.getBoolean("playOnline", true) && isOnlineActive && isDoingTurn && diceModus == 5) {
+                    if (isUpdateTable && prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn && diceModus == 5) {
 
 //                        Log.i(TAG, "5 onTouch(), isOnlineEntry: $isOnlineEntry")
 
@@ -2573,7 +2590,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //                Log.i(TAG, "onTouch(), diceBoard, view.id: " + view.id )
 
-                if (prefs.getBoolean("playOnline", true) && isOnlineActive && isDoingTurn) {
+                if (prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn) {
                     matchDataToDb(false, ONLINE_ACTIVE)
                 }
 
@@ -2679,7 +2696,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         }
         setSelectedItem(-1)
 
-        if (!prefs.getBoolean("playOnline", true))
+        if (!prefs.getBoolean("playOnline", false))
             setRunPrefs()
     }
 
@@ -2691,7 +2708,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             val col = Character.getNumericValue(gridId[1])
             val row = Character.getNumericValue(gridId[2])
 
-            if (!prefs.getBoolean("playOnline", true))
+            if (!prefs.getBoolean("playOnline", false))
                 performEngineEntryCommand("entry " + playerId + " " + col + " " + row + " " + -1)
 
         }
@@ -2721,7 +2738,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         setSelectedItem(position)
 
         if (ed.isGameOver) {
-            if (prefs.getBoolean("playOnline", true) && isOnlineActive) {
+            if (prefs.getBoolean("playOnline", false) && isOnlineActive) {
                 if (!isOnlineEntry)
                     setBtnPlayer(ed.playerToMove)
                 if (!ed.isFlipScreen)
@@ -2742,7 +2759,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 setDiceActions()
         }
 
-        if (!prefs.getBoolean("playOnline", true))
+        if (!prefs.getBoolean("playOnline", false))
             setRunPrefs()
     }
 
@@ -2801,7 +2818,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 ed.computePrevPlayerToMove(ed.playerStart)
                 ed.computeNextPlayerToMove(ed.playerStart)
 
-                if (!prefs.getBoolean("playOnline", true))
+                if (!prefs.getBoolean("playOnline", false))
                     setRunPrefs()
 
                 flipModus = 0
@@ -2822,7 +2839,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     btnDice.visibility = ImageView.INVISIBLE
 
                 if (isDiceBoard and (requestCode == NEW_GAME_REQUEST_CODE)) {
-                    if (!prefs.getBoolean("playOnline", true))
+                    if (!prefs.getBoolean("playOnline", false))
                         setRunPrefs()
                     setUI()
                     return
@@ -2858,7 +2875,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //                Log.i(TAG, "invitePlayer(), fbUserId: $fbUserId, playerName: $playerName, ts: $ts")
 
-                var gameType = getStringByLocal(this@MainActivity, R.string.typeSingle, null, null, user.language!!)
+                var gameType = ""
                 if (!ed.isSingleGame)
                     gameType = getStringByLocal(this@MainActivity, R.string.typeDouble, null, null, user.language!!)
 
@@ -3216,7 +3233,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         accountingDialog.setMessage(text)
         accountingDialog.setCancelable(true)
         accountingDialog.setOnCancelListener {
-            showAds()
+            showAds(ADS_SELECTED_FROM_ACCOUNTING)
         }
         mAccountingDialog = accountingDialog.create()
         mAccountingDialog!!.show()
@@ -3771,7 +3788,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove))
             btnDice.visibility = ImageView.INVISIBLE
 
-        if (prefs.getBoolean("playOnline", true) && isOnlineEntry)
+        if (prefs.getBoolean("playOnline", false) && isOnlineEntry)
             btnDice.visibility = ImageView.INVISIBLE
 
 //        Log.i(TAG, "diceView(), diceModus: " + diceModus + ", isDoingTurn: "  + isDoingTurn + ", isOnlineEntry: "  + isOnlineEntry)
@@ -3829,10 +3846,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     private fun setOnlineMessage() {
 
-//        Log.i(TAG, "setOnlineMessage(), online: ${prefs.getBoolean("playOnline", true)}, mIsSignIn: $mIsSignIn, isOnlineActive: $isOnlineActive")
+//        Log.i(TAG, "setOnlineMessage(), online: ${prefs.getBoolean("playOnline", false)}, mIsSignIn: $mIsSignIn, isOnlineActive: $isOnlineActive")
 //        Log.i(TAG, "setOnlineMessage(), isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn, diceModus: $diceModus, diceModusPrev: $diceModusPrev")
 
-        if (prefs.getBoolean("playOnline", true) && isOnlineActive) {
+        if (prefs.getBoolean("playOnline", false) && isOnlineActive) {
             btnPlayerResult.visibility = TextView.VISIBLE
             btnPlayerRound.visibility = TextView.VISIBLE
             if (isDoingTurn) {
@@ -3892,7 +3909,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
         }
 
-        if (prefs.getBoolean("playOnline", true)) {
+        if (prefs.getBoolean("playOnline", false)) {
             if (!isOnlineActive)
                 setNoActiveMatch()
             if (!mIsSignIn)
@@ -3944,7 +3961,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.i(TAG, "setBtnPlayer(), playerId: $playerId, diceModus: $diceModus, diceModusPrev: $diceModusPrev")
 
-        if (ed.isGameOver && !prefs.getBoolean("playOnline", true)) {
+        if (ed.isGameOver && !prefs.getBoolean("playOnline", false)) {
             gameOver()
             return
         }
@@ -3959,9 +3976,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         when (playerId) {
             'A' -> {
                 name =
-                    if (!prefs.getBoolean("enginePlayerA", true) or (diceState == 0) or prefs.getBoolean("playOnline", true)) {
+                    if (!prefs.getBoolean("enginePlayerA", true) or (diceState == 0) or prefs.getBoolean("playOnline", false)) {
                         btnPlayerIcon.setImageResource(R.drawable.button_human_a)
-                        if (prefs.getBoolean("playOnline", true))
+                        if (prefs.getBoolean("playOnline", false))
                             mMatchBaseData?.nameA ?: "???"
                         else
                             prefs.getString("nameA", resources.getString(R.string.yourName))
@@ -3987,7 +4004,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 name =
                     if (!prefs.getBoolean("enginePlayerB", false) or (diceState == 0) or prefs.getBoolean("playOnline", true)) {
                         btnPlayerIcon.setImageResource(R.drawable.button_human_b)
-                        if (prefs.getBoolean("playOnline", true))
+                        if (prefs.getBoolean("playOnline", false))
                             mMatchBaseData?.nameB ?: "???"
                         else
                             prefs.getString("nameB", resources.getString(R.string.yourName))
@@ -4008,7 +4025,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             }
             'C' -> {
                 name =
-                    if (!prefs.getBoolean("enginePlayerC", false) or (diceState == 0) or prefs.getBoolean("playOnline", true)) {
+                    if (!prefs.getBoolean("enginePlayerC", false) or (diceState == 0) or prefs.getBoolean("playOnline", false)) {
                         btnPlayerIcon.setImageResource(R.drawable.button_human_c)
                         prefs.getString("nameC", resources.getString(R.string.yourName))
                     } else {
@@ -4075,7 +4092,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             }
         }
 
-        if (prefs.getBoolean("playOnline", true) && isOnlineActive) {
+        if (prefs.getBoolean("playOnline", false) && isOnlineActive) {
             btnPlayerResult.visibility = TextView.VISIBLE
         }
 
@@ -4153,7 +4170,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         ed.putInt("bonusServed", Integer.parseInt(pg.getTag("BonusServed")!!))
         ed.putInt("bonusServedGrande", Integer.parseInt(pg.getTag("BonusServedGrande")!!))
 
-        if (!prefs.getBoolean("playOnline", true)) {
+        if (!prefs.getBoolean("playOnline", false)) {
             ed.putInt("icons", Integer.parseInt(pg.getTag("Icons")!!))
             ed.putBoolean("isPlayerColumn", java.lang.Boolean.valueOf(pg.getTag("PlayerColumn")))
             ed.putBoolean("isSummation", java.lang.Boolean.valueOf(pg.getTag("Summation")))
@@ -4484,7 +4501,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             val oldDiceModus = diceModus
 
 
-            if (prefs.getBoolean("playOnline", true) && diceModus == 5 && !initRound) {
+            if (prefs.getBoolean("playOnline", false) && diceModus == 5 && !initRound) {
 
 //                Log.i(TAG, "animation(), return")
 
@@ -4538,11 +4555,11 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //            Log.i(TAG, "animation(), matchDataToDb(), isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn")
 
-            if (prefs.getBoolean("playOnline", true) && isOnlineActive && isDoingTurn) {
+            if (prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn) {
                 matchDataToDb(false, ONLINE_ACTIVE)
             }
 
-            if (prefs.getBoolean("playOnline", true)) {
+            if (prefs.getBoolean("playOnline", false)) {
                 txtPlayers.visibility = TextView.VISIBLE
                 txtPlayerEps.visibility = TextView.VISIBLE
                 var players = ""
@@ -4620,7 +4637,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.i(TAG, "1a animationDiceBoard(), isDoingTurn: $isDoingTurn, isInitBoard: $isInitBoard, initRound: $initRound")
 
-        if (prefs.getBoolean("playOnline", true) && !isDoingTurn && !isInitBoard)
+        if (prefs.getBoolean("playOnline", false) && !isDoingTurn && !isInitBoard)
             return
 
         if (isInitBoard) {
@@ -4628,9 +4645,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             isInitRound = false
             diceBoard.initBoard()
 
-//            Log.i(TAG, "1b animationDiceBoard(), isDoingTurn: $isDoingTurn, playOnline: ${prefs.getBoolean("playOnline", true)}")
+//            Log.i(TAG, "1b animationDiceBoard(), isDoingTurn: $isDoingTurn, playOnline: ${prefs.getBoolean("playOnline", false)}")
 
-            if (!(prefs.getBoolean("playOnline", true) && !isDoingTurn)) {
+            if (!(prefs.getBoolean("playOnline", false) && !isDoingTurn)) {
 
 //                Log.i(TAG, "1c animationDiceBoard(), handlerAnimationDices()")
 
@@ -4673,7 +4690,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
             }
             var playerToMove = ed.playerToMove
-            if (prefs.getBoolean("playOnline", true)) {
+            if (prefs.getBoolean("playOnline", false)) {
                 if (diceModus == 1 && diceModusPrev == 4)  // turn !
                     playerToMove = ed.prevPlayerToMove
             } else {
@@ -4688,7 +4705,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //            Log.i(TAG, "3 animationDiceBoard(), mMatchId: $mMatchId, mMatchBaseData: $mMatchBaseData, players: $players")
 
-            if (prefs.getBoolean("playOnline", true)
+            if (prefs.getBoolean("playOnline", false)
                     && players == ""
                     && !isOnlineActive
                 ) {
@@ -4708,12 +4725,12 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //            Log.d(TAG, "3 animationDiceBoard(), diceModus: $diceModus, diceModusCheckRoll: $diceModusCheckRoll")
 
-            if (prefs.getBoolean("playOnline", true) && !isDoingTurn && diceModus == diceModusCheckRoll)
+            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceModus == diceModusCheckRoll)
                 initRollValues = false
 
 //            Log.i(TAG, "4 animationDiceBoard(), initRollValues: $initRollValues, isConfigurationChanged: $isConfigurationChanged")
 
-            if (prefs.getBoolean("playOnline", true) && !isDoingTurn && isConfigurationChanged) {
+            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && isConfigurationChanged) {
                 initRollValues = true
                 isConfigurationChanged = false
             }
@@ -4733,7 +4750,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             isInitRound = true
 
 //            Log.i(TAG, "C animationDiceBoard(), setOnlineMessage()")
-            if (prefs.getBoolean("playOnline", true))
+            if (prefs.getBoolean("playOnline", false))
                 setOnlineMessage()
             else {
                 if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove)) {
@@ -4794,7 +4811,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         if (isEnginePlayer(ed.playerToMove) and (oldDiceModus <= 3) and ((diceRoll[0] >= 0) or (diceHold[0] >= 0)))
             performEngineCommands(getEngineDiceCommand(ed.playerToMove, oldDiceModus, diceRoll, diceHold, diceDouble1, isServedDouble1))
 
-        if (prefs.getBoolean("playOnline", true) && isOnlineActive && isDoingTurn) {
+        if (prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn) {
 
 //            Log.i(TAG, "animationDiceBoard(), matchDataToDb(false, ONLINE_ACTIVE)")
 
@@ -4807,7 +4824,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.i(TAG, "initBoard(), isDoingTurn: $isDoingTurn, isInitBoard: $isInitBoard, isInitDelay: $isInitDelay")
 
-        if (prefs.getBoolean("playOnline", true) && !isDoingTurn && !isInitBoard)
+        if (prefs.getBoolean("playOnline", false) && !isDoingTurn && !isInitBoard)
             return
 
         if (isInitBoard) {
@@ -4817,7 +4834,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
             handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
 
-            if (!(prefs.getBoolean("playOnline", true) && !isDoingTurn))
+            if (!(prefs.getBoolean("playOnline", false) && !isDoingTurn))
                 return
 
         }
@@ -4848,7 +4865,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 playerInfoDouble = ed.getDiceResult(isServedDouble1, diceValuesDouble1)
             }
             var playerToMove = ed.playerToMove
-            if (prefs.getBoolean("playOnline", true)) {
+            if (prefs.getBoolean("playOnline", false)) {
                 if (diceModus == 1 && diceModusPrev == 4)  // turn !
                     playerToMove = ed.prevPlayerToMove
             } else {
@@ -4860,7 +4877,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             if (mMatchId != null)
                 players = getPlayersFromMatch(mMatchId!!)
 
-            if (prefs.getBoolean("playOnline", true)
+            if (prefs.getBoolean("playOnline", false)
                     && players == ""
                     && !isOnlineActive
             ) {
@@ -4879,9 +4896,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //            Log.d(TAG, "3 initBoard(), diceModus: $diceModus, diceModusCheckRoll: $diceModusCheckRoll")
 
-            if (prefs.getBoolean("playOnline", true) && !isDoingTurn && diceModus == diceModusCheckRoll)
+            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceModus == diceModusCheckRoll)
                 initRollValues = false
-            if (prefs.getBoolean("playOnline", true) && !isDoingTurn && diceModusCheckRoll == -1)
+            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceModusCheckRoll == -1)
                 initRollValues = true
             diceModusCheckRoll = diceModus
 
@@ -4889,11 +4906,11 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             initRollValues = true
         }
 
-        if (prefs.getBoolean("playOnline", true))
+        if (prefs.getBoolean("playOnline", false))
             isInitRound = true
 
 //        Log.i(TAG, "D initBoard(), setOnlineMessage()")
-        if (prefs.getBoolean("playOnline", true))
+        if (prefs.getBoolean("playOnline", false))
             setOnlineMessage()
         else {
             if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove)) {
@@ -4908,7 +4925,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     fun updateTable(isUpdate: Boolean): Boolean {
         if (isUpdate) {
-            if (prefs.getBoolean("playOnline", true)) {
+            if (prefs.getBoolean("playOnline", false)) {
                 tableView.updateTable(ed, true, isOnlineActive)
 
                 if (isOnlineActive) {
@@ -4941,7 +4958,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
         } else {
 
-            if (!prefs.getBoolean("playOnline", true)) {
+            if (!prefs.getBoolean("playOnline", false)) {
                 ed.setPlayerToMove(getEngineName(isEnginePlayer(ed.nextPlayerToMove)))
             }
             setBtnPlayer(ed.playerToMove)
@@ -5150,7 +5167,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         }
     }
 
-    private fun showAds(): Boolean {
+    private fun showAds(actionID: String): Boolean {
         var isAdsShowing = false
         if (prefs.getBoolean("advertising", true)) {
             val timeStamp = System.currentTimeMillis()
@@ -5161,6 +5178,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     1 -> {
                         if (mInterstitialAd.isLoaded) {
                             mInterstitialAd.show()
+                            setAnalyticsLogEvent(actionID)
                             setTimeStamp = true
                             adsType = 2
                         } else {
@@ -5170,6 +5188,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     else -> {
                         if (mRewardedVideoAd.isLoaded) {
                             mRewardedVideoAd.show()
+                            setAnalyticsLogEvent(actionID)
                             setTimeStamp = true
                             adsType = 1
                         } else {
@@ -5189,6 +5208,15 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         }
 
         return isAdsShowing
+    }
+
+    private fun setAnalyticsLogEvent(actionID: String) {
+        val bundle = Bundle()
+        if (prefs.getBoolean("playOnline", false))
+            bundle.putString("fromOnline", actionID)
+        else
+            bundle.putString("fromOffline", actionID)
+        firebaseAnalytics.logEvent("adsSelected", bundle)
     }
 
     private fun showMatchDialog(matchList: ArrayList<MatchList>, setAllChecked: Boolean) {
@@ -5443,7 +5471,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     if (mAccountingDialog!!.isShowing)
                         mAccountingDialog!!.dismiss()
                 }
-                var gameType = getString(R.string.typeSingle).toUpperCase((Locale.ROOT))
+                var gameType = ""
                 if (!mMatchBaseData!!.singleGame!!)
                     gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
                 val defferedTimestamp = async { getTimestampFromServer() }
@@ -5620,7 +5648,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             val defferedGetUserData = async { getUserData(fbUserId) }
             val user = defferedGetUserData.await()
             defferedGetUserData.cancel()
-            var gameType = getString(R.string.typeSingle).toUpperCase((Locale.ROOT))
+            var gameType = ""
             if (user != null && !user.singleGame!!)
                 gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
 
@@ -5673,7 +5701,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             val defferedGetUserData = async { getUserData(fbUserId) }
             val user = defferedGetUserData.await()
             defferedGetUserData.cancel()
-            var gameType = getString(R.string.typeSingle).toUpperCase((Locale.ROOT))
+            var gameType = ""
             if (user != null && !user.singleGame!!)
                 gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
 
@@ -5726,7 +5754,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                     dialogTwoBtn.dismiss()
                     dialogInfo.dismiss()
                     dismissAllDialogs()
-                    if (prefs.getBoolean("playOnline", true) && mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
+                    if (prefs.getBoolean("playOnline", false) && mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
                         setLeaderboardH()
                         showEscaleroPointsDialog(getString(R.string.escaleroPoints),
                                 getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
@@ -5765,7 +5793,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 //                Log.i(TAG, "showInvitationFromQuickMatchDialog(), userName: $userName, userGpsId: $userGpsId")
 
                 dialogQuickMatchInvitation.mes2Title.text = mesTitle
-                var gameType = getString(R.string.typeSingle).toUpperCase((Locale.ROOT))
+                var gameType = ""
                 if (!user.singleGame!!)
                     gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
                 dialogQuickMatchInvitation.mes2.text = getString(R.string.playerInvitation, userName, gameType)
@@ -5876,7 +5904,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 val ed = prefs.edit()
                 ed.putLong("adsDelay", 0L)
                 ed.apply()
-                showAds()
+                showAds(ADS_SELECTED_FROM_EP)
                 dialogTwoBtn.dismiss()
             }
             else {
@@ -6252,7 +6280,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             ed.putBoolean("advertising", true)
             ed.putLong("adsDelay", 0L)
             ed.apply()
-            if (!showAds())
+            if (!showAds(ADS_SELECTED_FROM_ASK))
                 Toast.makeText(applicationContext, getString(R.string.currentlyNoAds), Toast.LENGTH_LONG).show()
             dialogTwoBtn.dismiss()
         }
@@ -6270,139 +6298,137 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         if (!checkConnectivity(false))
             return
 
-        if (mIsSignIn) {
-            dialogPlayOnline.logOutBtn.visibility = TextView.VISIBLE
-            dialogPlayOnline.logInName.text = mPlayerName
-        }
-        else {
-            dialogPlayOnline.logOutBtn.visibility = TextView.INVISIBLE
-            dialogPlayOnline.logInName.text = getString(R.string.logIn)
-            val epPlayer = "$mPlayerEp EP"
-            val epPrefs = "(? EP)"
-            if (mIsSignIn && mPlayerEp >= 0)
-                dialogPlayOnline.escaleroPoints.text = epPlayer
-            else
-                dialogPlayOnline.escaleroPoints.text = epPrefs
-        }
-
-        dialogPlayOnline.logInName.setOnClickListener {
-
-            if (checkConnectivity(false)) {
-                if (mIsSignIn) {
-                    if (isOnlineActive)
-                        showInfoDialog(getString(R.string.info), getString(R.string.disabledOnline), getString(R.string.ok))
-                    else
-                        showUpdatePlayerNameDialog(false)
-                } else {
-                    startSignInIntent()
-                }
-            }
-
-        }
-
-        dialogPlayOnline.logOutBtn.setOnClickListener {
-            signOut()
-            mIsSignIn = false
-            if (checkConnectivity(true))
-                showPlayOnlineDialog()
-        }
-
-        if (ed.isSingleGame) {
-            dialogPlayOnline.rb_single.isChecked = true
-            dialogPlayOnline.rb_double.isChecked = false
-        }
-        else {
-            dialogPlayOnline.rb_double.isChecked = true
-            dialogPlayOnline.rb_single.isChecked = false
-        }
-        dialogPlayOnline.rb_single.setOnClickListener {
-            if (!ed.isSingleGame) {
-                ed.isSingleGame = true
-                val edi = prefs.edit()
-                edi.putBoolean("isSingleGame", ed.isSingleGame)
-                edi.apply()
-                dialogPlayOnline.rb_single.isChecked = true
-                dialogPlayOnline.rb_double.isChecked = false
-                updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
-                isInitBoard = true
-                handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
-                handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
-
-//                Log.d(TAG, "showPlayOnlineDialog(), rb_single, ed.isSingleGame: ${ed.isSingleGame}")
-
-            }
-        }
-        dialogPlayOnline.rb_double.setOnClickListener {
-            if (ed.isSingleGame) {
-                ed.isSingleGame = false
-                val edi = prefs.edit()
-                edi.putBoolean("isSingleGame", ed.isSingleGame)
-                edi.apply()
-                dialogPlayOnline.rb_double.isChecked = true
-                dialogPlayOnline.rb_single.isChecked = false
-                updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
-                isInitBoard = true
-                handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
-                handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
-
-//                Log.d(TAG, "showPlayOnlineDialog(), rb_double, ed.isSingleGame: ${ed.isSingleGame}")
-
-            }
-
-//            Log.d(TAG, "showPlayOnlineDialog(), dialogPlayOnline.rb_double, clicked")
-
-        }
-
-        dialogPlayOnline.playerSearch.setOnClickListener {
-            if (!mIsSignIn) {
-                showErrorMessage(R.string.notLoggedIn)
-            } else {
-                showPlayerQuery()
-            }
-        }
-
-        dialogPlayOnline.quickMatch.setOnClickListener {
-            if (!mIsSignIn) {
-                showErrorMessage(R.string.notLoggedIn)
-            } else {
-                if (isOnlineActive)
-                    showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
-                else {
-                    if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                        setLeaderboardH()
-                        showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                            getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                            getString(R.string.appContinue),
-                            getString(R.string.advertising))
-                    }
-                    else
-                        startQuickMatch()
-                    dialogPlayOnline.dismiss()
-                }
-            }
-        }
-
-        dialogPlayOnline.checkMatches.setOnClickListener {
-            if (!mIsSignIn) {
-                showErrorMessage(R.string.notLoggedIn)
-            } else {
-                checkMatches()
-            }
-        }
-
-            val epPlayer = "$mPlayerEp EP"
-            val epPrefs = "(? EP)"
-
-//        Log.d(TAG, "A  showPlayOnlineDialog(), mIsSignIn: $mIsSignIn, mPlayerEp: $mPlayerEp")
-//        Log.d(TAG, "B showPlayOnlineDialog(), dialogPlayOnline.isShowing: ${dialogPlayOnline.isShowing}, isFinishing: $isFinishing")
-
-        if (mIsSignIn && mPlayerEp >= 0)
-            dialogPlayOnline.escaleroPoints.text = epPlayer
-
-        if (!dialogPlayOnline.isShowing && !isFinishing)
-            dialogPlayOnline.show()
 
         GlobalScope.launch(Dispatchers.Main) {
+
+            if (mIsSignIn) {
+                dialogPlayOnline.logOutBtn.visibility = TextView.VISIBLE
+                dialogPlayOnline.logInName.text = mPlayerName
+            }
+            else {
+                dialogPlayOnline.logOutBtn.visibility = TextView.INVISIBLE
+                dialogPlayOnline.logInName.text = getString(R.string.logIn)
+                val epPlayer = "$mPlayerEp EP"
+                val epPrefs = "(? EP)"
+                if (mIsSignIn && mPlayerEp >= 0)
+                    dialogPlayOnline.escaleroPoints.text = epPlayer
+                else
+                    dialogPlayOnline.escaleroPoints.text = epPrefs
+            }
+
+            dialogPlayOnline.logInName.setOnClickListener {
+
+                if (checkConnectivity(false)) {
+                    if (mIsSignIn) {
+                        if (isOnlineActive)
+                            showInfoDialog(getString(R.string.info), getString(R.string.disabledOnline), getString(R.string.ok))
+                        else
+                            showUpdatePlayerNameDialog(false)
+                    } else {
+                        startSignInIntent()
+                    }
+                }
+
+            }
+
+            dialogPlayOnline.logOutBtn.setOnClickListener {
+                signOut()
+                mIsSignIn = false
+                if (checkConnectivity(true))
+                    showPlayOnlineDialog()
+            }
+
+            if (ed.isSingleGame) {
+                dialogPlayOnline.rb_single.isChecked = true
+                dialogPlayOnline.rb_double.isChecked = false
+            }
+            else {
+                dialogPlayOnline.rb_double.isChecked = true
+                dialogPlayOnline.rb_single.isChecked = false
+            }
+            dialogPlayOnline.rb_single.setOnClickListener {
+                if (!ed.isSingleGame) {
+                    ed.isSingleGame = true
+                    val edi = prefs.edit()
+                    edi.putBoolean("isSingleGame", ed.isSingleGame)
+                    edi.apply()
+                    dialogPlayOnline.rb_single.isChecked = true
+                    dialogPlayOnline.rb_double.isChecked = false
+                    updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
+                    isInitBoard = true
+                    handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
+                    handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
+
+    //                Log.d(TAG, "showPlayOnlineDialog(), rb_single, ed.isSingleGame: ${ed.isSingleGame}")
+
+                }
+            }
+            dialogPlayOnline.rb_double.setOnClickListener {
+                if (ed.isSingleGame) {
+                    ed.isSingleGame = false
+                    val edi = prefs.edit()
+                    edi.putBoolean("isSingleGame", ed.isSingleGame)
+                    edi.apply()
+                    dialogPlayOnline.rb_double.isChecked = true
+                    dialogPlayOnline.rb_single.isChecked = false
+                    updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
+                    isInitBoard = true
+                    handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
+                    handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
+
+    //                Log.d(TAG, "showPlayOnlineDialog(), rb_double, ed.isSingleGame: ${ed.isSingleGame}")
+
+                }
+
+    //            Log.d(TAG, "showPlayOnlineDialog(), dialogPlayOnline.rb_double, clicked")
+
+            }
+
+            dialogPlayOnline.playerSearch.setOnClickListener {
+                if (!mIsSignIn) {
+                    showErrorMessage(R.string.notLoggedIn)
+                } else {
+                    showPlayerQuery()
+                }
+            }
+
+            dialogPlayOnline.quickMatch.setOnClickListener {
+                if (!mIsSignIn) {
+                    showErrorMessage(R.string.notLoggedIn)
+                } else {
+                    if (isOnlineActive)
+                        showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
+                    else {
+                        if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
+                            setLeaderboardH()
+                            showEscaleroPointsDialog(getString(R.string.escaleroPoints),
+                                getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
+                                getString(R.string.appContinue),
+                                getString(R.string.advertising))
+                        }
+                        else
+                            startQuickMatch()
+                        dialogPlayOnline.dismiss()
+                    }
+                }
+            }
+
+            dialogPlayOnline.checkMatches.setOnClickListener {
+                if (!mIsSignIn) {
+                    showErrorMessage(R.string.notLoggedIn)
+                } else {
+                    checkMatches()
+                }
+            }
+
+                val epPlayer = "$mPlayerEp EP"
+                val epPrefs = "(? EP)"
+
+    //        Log.d(TAG, "A  showPlayOnlineDialog(), mIsSignIn: $mIsSignIn, mPlayerEp: $mPlayerEp")
+    //        Log.d(TAG, "B showPlayOnlineDialog(), dialogPlayOnline.isShowing: ${dialogPlayOnline.isShowing}, isFinishing: $isFinishing")
+
+            if (mIsSignIn && mPlayerEp >= 0)
+                dialogPlayOnline.escaleroPoints.text = epPlayer
 
             if (!mPlayerId.isNullOrBlank()) {
                 val defferedLeaderboardScore = async { getLeaderboardScore(mPlayerId!!) }
@@ -6629,6 +6655,14 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.i(TAG, "showPlayerQuery(), start")
 
+        if (!isShowingPlayerQuery) {
+            dialogPlayerQuery = Dialog(this, android.R.style.Theme_Light)
+            dialogPlayerQuery.requestWindowFeature(Window.FEATURE_NO_TITLE)
+            dialogPlayerQuery.setContentView(R.layout.dialogplayerquery)
+        }
+
+        isShowingPlayerQuery = false
+
         dialogPlayOnline.dismiss()
 
         when (prefs.getInt("playerQueryId", 1)) {
@@ -6652,25 +6686,30 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             val edi = prefs.edit()
             edi.putInt("playerQueryId", 1)
             edi.apply()
+            dialogPlayerQuery.dismiss()
+            isShowingPlayerQuery = true
             showPlayerQuery()
         }
         dialogPlayerQuery.playerOftenActive.setOnClickListener {
             val edi = prefs.edit()
             edi.putInt("playerQueryId", 2)
             edi.apply()
+            dialogPlayerQuery.dismiss()
+            isShowingPlayerQuery = true
             showPlayerQuery()
         }
         dialogPlayerQuery.playerLeaderboard.setOnClickListener {
             val edi = prefs.edit()
             edi.putInt("playerQueryId", 3)
             edi.apply()
+            dialogPlayerQuery.dismiss()
+            isShowingPlayerQuery = true
             showPlayerQuery()
         }
 
         dialogPlayerQuery.leaderboardListView.visibility = ListView.INVISIBLE
         dialogPlayerQuery.leaderboardEmpty.visibility = ListView.VISIBLE
         dialogPlayerQuery.setCancelable(true)
-        dialogPlayerQuery.setCanceledOnTouchOutside(true)
         if (!isOnlineActive)
             dialogPlayerQuery.lbMes.text = getString(R.string.invitationSelectPlayer)
         else
@@ -6682,6 +6721,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 startQuickMatch()
         }
         dialogPlayerQuery.btnOk.setOnClickListener {
+            dialogPlayerQuery.dismiss()
+        }
+        dialogPlayerQuery.setOnCancelListener {
             dialogPlayerQuery.dismiss()
         }
 
@@ -6757,10 +6799,13 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                 defferedGetUserData.cancel()
 
                                 if (user != null) {
+
+//                                    Log.i(TAG, "showPlayerQuery(), queryUserId: ${user.uid!!}, queryUserame: ${user.name!!}")
+
                                     val defferedLeaderboardScore = async { getLeaderboardScore(fbUserId) }
                                     val leaderboardScore = defferedLeaderboardScore.await()
                                     defferedLeaderboardScore.cancel()
-                                    var gameType = getString(R.string.typeSingle).toUpperCase((Locale.ROOT))
+                                    var gameType = ""
                                     var isInvitation = true
                                     if (!ed.isSingleGame) {
                                         if (user.appVersionCode!! < MIN_VERSION_CODE) {
@@ -6775,8 +6820,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                         if (user.notifications!! && (!user.playing!! || (user.playing!! && user.currentMatchId == mMatchId ?: "?")))
                                             showPlayerQueryDialog(user, getString(R.string.invitationNewGame, gameType),
                                                     mes, getString(R.string.appCancel), getString(R.string.invitationTitle))
-                                        else
+                                        else {
+                                            //karl??? match deleted? active?
                                             showInfoDialog(getString(R.string.info), getString(R.string.playerNotAvailable, user.name), getString(R.string.ok))
+                                        }
                                     }
                                 }
                             }
@@ -7113,57 +7160,61 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                             val defferedGetMatchTimestamp = async { getMatchTimestamp(user.currentMatchId!!) }
                             val timestamp = defferedGetMatchTimestamp.await().toLong()
                             defferedGetMatchTimestamp.cancel()
+                            val defferedTimestamp = async { getTimestampFromServer() }
+                            val serverTimestamp = defferedTimestamp.await().toLong()
+                            defferedTimestamp.cancel()
 
-                            mTimestampPre = timestamp
-                            if (mPlayerId == mMatchBaseData!!.playerIdA!!) {
-                                mOponentId = mMatchBaseData!!.playerIdB!!
-                                mOponentName = mMatchBaseData!!.nameB
-                                mOponentABC = "B"
-                                mPlayerABC = "A"
-                                setOponentData(mMatchBaseData!!.playerIdB!!, "B")
-                            }
-                            else {
-                                mOponentId = mMatchBaseData!!.playerIdA!!
-                                mOponentName = mMatchBaseData!!.nameA
-                                mOponentABC = "A"
-                                mPlayerABC = "B"
-                                setOponentData(mMatchBaseData!!.playerIdA!!, "A")
-                            }
+                            if (serverTimestamp - timestamp <= RECONNECT_TIME) {
+                                mTimestampPre = timestamp
+                                if (mPlayerId == mMatchBaseData!!.playerIdA!!) {
+                                    mOponentId = mMatchBaseData!!.playerIdB!!
+                                    mOponentName = mMatchBaseData!!.nameB
+                                    mOponentABC = "B"
+                                    mPlayerABC = "A"
+                                    setOponentData(mMatchBaseData!!.playerIdB!!, "B")
+                                } else {
+                                    mOponentId = mMatchBaseData!!.playerIdA!!
+                                    mOponentName = mMatchBaseData!!.nameA
+                                    mOponentABC = "A"
+                                    mPlayerABC = "B"
+                                    setOponentData(mMatchBaseData!!.playerIdA!!, "A")
+                                }
 
-                            ed.isSingleGame = mMatchBaseData!!.singleGame ?: true
-                            val edi = prefs.edit()
-                            edi.putBoolean("isSingleGame", ed.isSingleGame)
-                            edi.apply()
+                                ed.isSingleGame = mMatchBaseData!!.singleGame ?: true
+                                val edi = prefs.edit()
+                                edi.putBoolean("isSingleGame", ed.isSingleGame)
+                                edi.apply()
 
 //                            Log.d(TAG, "4 showMatchDialog(), actionId: $actionId")
 
-                            val defferedGetUserDataOpo = async { getUserData(mOponentId!!) }
-                            val userOpo = defferedGetUserDataOpo.await()
-                            defferedGetUserDataOpo.cancel()
+                                val defferedGetUserDataOpo = async { getUserData(mOponentId!!) }
+                                val userOpo = defferedGetUserDataOpo.await()
+                                defferedGetUserDataOpo.cancel()
 
-                            if (userOpo != null) {
-                                dialogTwoBtn.dismiss()
-                                dismissAllDialogs()
-                                if (userOpo.online!! && userOpo.playing!! && userOpo.currentMatchId == user.currentMatchId ) {
-                                    isOnlineActive = true
-                                    startMatchUpdateListener(mMatchId!!)
+                                if (userOpo != null) {
+                                    dialogTwoBtn.dismiss()
+                                    dismissAllDialogs()
+                                    if (userOpo.online!! && userOpo.playing!! && userOpo.currentMatchId == user.currentMatchId) {
+                                        isOnlineActive = true
+                                        startMatchUpdateListener(mMatchId!!)
 
-                                    if (mMatchUpdateData!!.turnPlayerId!! == mPlayerId) {
-                                        mMatchUpdateData!!.onlineAction += CORRECTION
-                                        matchTurn(mMatchUpdateData!!)
+                                        if (mMatchUpdateData!!.turnPlayerId!! == mPlayerId) {
+                                            mMatchUpdateData!!.onlineAction += CORRECTION
+                                            matchTurn(mMatchUpdateData!!)
+                                        } else {
+                                            matchUpdate(mMatchUpdateData!!)
+                                        }
+
+                                        return@launch
+
                                     }
-                                    else {
-                                        matchUpdate(mMatchUpdateData!!)
-                                    }
-
-                                    return@launch
-
+                                } else {
+                                    initOnline()
                                 }
                             }
-                            else {
-                                initOnline()
-                            }
-
+                            //karl???
+//                            else
+//                                matchDataToDb(true, getPausedStatus())
                         }
                     }
 
@@ -7408,7 +7459,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     private fun logOutUpdateUser(isFinishApp: Boolean, updateUser: Boolean) {
 
-//        Log.d(TAG, "logOutUpdateUser(), isFinishApp: $isFinishApp, updateUser: $updateUser")
+//        Log.d(TAG, "logOutUpdateUser(), isFinishApp: $isFinishApp, updateUser: $updateUser, mPlayerName: $mPlayerName, mPlayerId: $mPlayerId")
 
         GlobalScope.launch(Dispatchers.Main) {
 
@@ -7488,7 +7539,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     private fun setNoActiveMatch() {
 
-        if (prefs.getBoolean("playOnline", true) && !isOnlineActive)
+        if (prefs.getBoolean("playOnline", false) && !isOnlineActive)
             quickMatchListener()
 
         btnDice.visibility = TextView.VISIBLE
@@ -8601,7 +8652,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     fun isEnginePlayer(playerToMove: Char): Boolean {
         var enginePlayer = false
-        if ((diceState == 1) && prefs.getBoolean("enginePlayer", true) && !prefs.getBoolean("playOnline", true)) {
+        if ((diceState == 1) && prefs.getBoolean("enginePlayer", true) && !prefs.getBoolean("playOnline", false)) {
             if (prefs.getBoolean("enginePlayerA", true) and (playerToMove == 'A'))
                 enginePlayer = true
             if (prefs.getBoolean("enginePlayerB", false) and (playerToMove == 'B'))
@@ -8683,7 +8734,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     private fun performEngineCommands(command: String) {
 
-        if (prefs.getBoolean("playOnline", true))
+        if (prefs.getBoolean("playOnline", false))
             return
 
         engineCommand =
@@ -8772,12 +8823,19 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
         const val ONLINE_MAX_USER_MATCHES = 10
 
+        const val ADS_SELECTED_FROM_TABLE =         "table"
+        const val ADS_SELECTED_FROM_ACCOUNTING =    "accounting"
+        const val ADS_SELECTED_FROM_EP =            "ep"
+        const val ADS_SELECTED_FROM_ASK =           "ask"
+
         const val ONLINE_ADS_MIN_TIME = 20000L
         const val NOTIFICATION_DELAY = 15000L
         const val ADS_DELAY = 600000L           // 10   min
         const val QUICK_MATCH_DELAY = 180000L   // 3    min
+        const val RECONNECT_TIME = 180000L      // 3    min
         const val MIN_UPDATE_TIME = 400L        // mil sec
         const val MATCH_TIMEOUT = 600000L       // 10    min
+        const val MIN_BTN_DELAY = 300L
 
         const val RC_SIGN_IN = 10001
         const val MIN_VERSION_CODE = 55

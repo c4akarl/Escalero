@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/activity_vertical_margin"
+    android:layout_marginBottom="@dimen/activity_vertical_margin"
+    android:background="@color/colorBlack">
+
+    <ImageView
+        android:id="@+id/gamesIcon"
+        android:src="@drawable/icon_firebase"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="@dimen/button_margin"
+        android:layout_marginLeft="@dimen/button_margin"
+        android:layout_alignParentLeft="true" />
+    <ImageView
+        android:id="@+id/escaleroIcon"
+        android:src="@drawable/icon_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="@dimen/button_margin"
+        android:layout_marginRight="@dimen/button_margin"
+        android:layout_alignParentRight="true" />
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@+id/gamesIcon"
+        android:layout_toLeftOf="@+id/escaleroIcon"
+        android:gravity="center_horizontal"
+        android:textColor="@color/colorDiceB"
+        android:textSize="36dp"
+        android:text="@string/escaleroOnline" />
+
+    <View
+        android:id="@+id/sep1"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_below="@id/title"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
+        android:layout_marginBottom="@dimen/activity_vertical_margin"
+        android:background="@color/colorHoldNewGame"/>
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_below="@id/sep1"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/tv_height"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="@dimen/view_horizontal_margin_4"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size"
+        android:text="@string/connectToServer" />
+
+    <TextView
+        android:id="@+id/message2"
+        android:layout_below="@id/message"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/tv_height"
+        android:layout_centerHorizontal="true"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size"
+        android:text="@string/connectToServer" />
+
+    <TextView
+        android:id="@+id/timer"
+        android:layout_below="@id/message2"
+        android:layout_width="200dp"
+        android:layout_height="100dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="@dimen/view_horizontal_margin_12"
+        android:maxLength="12"
+        android:inputType="number"
+        android:textColor="@color/colorHold"
+        android:textSize="75dp"
+        android:text="45" />
+
+    <TextView
+        android:id="@+id/cancel"
+        style="@style/c4aTV4"
+        android:layout_below="@id/timer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rectangleyellow"
+        android:layout_gravity="center"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="@dimen/view_horizontal_margin_4"
+        android:paddingStart="@dimen/view_horizontal_margin_4"
+        android:paddingTop="@dimen/view_horizontal_margin_4"
+        android:paddingLeft="@dimen/view_horizontal_margin_4"
+        android:paddingEnd="@dimen/view_horizontal_margin_4"
+        android:paddingBottom="@dimen/view_horizontal_margin_4"
+        android:paddingRight="@dimen/view_margin_10"
+        android:text="@string/appCancel" />
+
+</RelativeLayout>

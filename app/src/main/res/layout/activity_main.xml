@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorMainActivity"
+    tools:context="com.androidheads.vienna.escalero.MainActivity">
+
+    <com.androidheads.vienna.escalero.TableView
+        android:id="@+id/tableView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="0dip" />
+
+    <RelativeLayout
+        android:id="@+id/rl1"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/tableView"
+        android:layout_marginLeft="@dimen/view_horizontal_margin_12"
+        android:layout_marginRight="@dimen/view_horizontal_margin_12"
+        android:layout_marginTop="@dimen/view_horizontal_margin_12"
+        tools:context="com.androidheads.vienna.escalero.MainActivity">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:weightSum="6"
+            android:orientation="horizontal" >
+            <ImageView
+                android:id="@+id/radio0"
+                android:onClick="myClickHandler"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:adjustViewBounds="true"
+                android:layout_marginRight="@dimen/view_horizontal_margin_4"
+                android:background="@drawable/entry" />
+            <ImageView
+                android:id="@+id/radio1"
+                android:onClick="myClickHandler"
+                android:layout_toRightOf="@+id/radio0"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:adjustViewBounds="true"
+                android:layout_marginRight="@dimen/view_horizontal_margin_4"
+                android:button="@null"
+                android:background="@drawable/entry" />
+            <ImageView
+                android:id="@+id/radio2"
+                android:onClick="myClickHandler"
+                android:layout_toRightOf="@+id/radio1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:adjustViewBounds="true"
+                android:layout_marginRight="@dimen/view_horizontal_margin_4"
+                android:background="@drawable/entry" />
+            <ImageView
+                android:id="@+id/radio3"
+                android:onClick="myClickHandler"
+                android:layout_toRightOf="@+id/radio2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:adjustViewBounds="true"
+                android:layout_marginRight="@dimen/view_horizontal_margin_4"
+                android:background="@drawable/entry"/>
+            <ImageView
+                android:id="@+id/radio4"
+                android:onClick="myClickHandler"
+                android:layout_toRightOf="@+id/radio3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:adjustViewBounds="true"
+                android:layout_marginRight="@dimen/view_horizontal_margin_4"
+                android:background="@drawable/entry" />
+            <ImageView
+                android:id="@+id/radio5"
+                android:onClick="myClickHandler"
+                android:layout_toRightOf="@+id/radio4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:adjustViewBounds="true"
+                android:background="@drawable/entry" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl2"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/tableView"
+        android:layout_marginTop="@dimen/view_horizontal_margin_12"
+        tools:context="com.androidheads.vienna.escalero.MainActivity">
+
+        <TextView
+            android:id="@+id/txtPlayers"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="@dimen/margin_0"
+            android:layout_marginBottom="@dimen/margin_0"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+        <TextView
+            android:id="@+id/txtPlayerEps"
+            android:layout_below="@+id/txtPlayers"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="@dimen/margin_0"
+            android:layout_marginBottom="@dimen/margin_0"
+            android:textColor="@color/colorPlayerB"
+            android:textSize="@dimen/text_size_16" />
+
+        <LinearLayout
+            android:id="@+id/ll2"
+            android:layout_below="@+id/txtPlayerEps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:weightSum="6"
+            android:orientation="horizontal" >
+            <ImageView
+                android:id="@+id/diceD_1"
+                android:src="@drawable/transparent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceD_2"
+                android:src="@drawable/transparent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceD_3"
+                android:src="@drawable/transparent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceD_4"
+                android:src="@drawable/transparent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceD_5"
+                android:src="@drawable/transparent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/doubleA"
+                android:src="@drawable/d1s"
+                android:onClick="myClickHandler"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_vertical_margin"
+                android:layout_marginLeft="10dp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnPlayerInfo2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="2dp"
+            android:layout_marginRight="2dp"
+            style="@style/c4aTV1"
+            android:background="@color/colorTextBackground"
+            android:textColor="@color/colorText"
+            android:textSize="@dimen/text_size_16"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            android:layout_alignParentRight="true"
+            android:layout_alignBottom="@+id/ll2" />
+
+        <LinearLayout
+            android:id="@+id/ll3"
+            android:layout_below="@+id/ll2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:weightSum="6"
+            android:orientation="horizontal" >
+            <ImageView
+                android:id="@+id/diceA_1"
+                android:src="@drawable/qm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_horizontal_margin_4"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceA_2"
+                android:src="@drawable/qm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_horizontal_margin_4"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceA_3"
+                android:src="@drawable/qm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_horizontal_margin_4"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceA_4"
+                android:src="@drawable/qm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_horizontal_margin_4"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+            <ImageView
+                android:id="@+id/diceA_5"
+                android:src="@drawable/qm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scaleType="fitXY"
+                android:layout_marginTop="@dimen/view_horizontal_margin_4"
+                android:layout_marginLeft="@dimen/view_horizontal_margin_4" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnPlayerInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="2dp"
+            android:layout_marginRight="2dp"
+            style="@style/c4aTV1"
+            android:background="@color/colorTextBackground"
+            android:textColor="@color/colorText"
+            android:textSize="@dimen/text_size_16"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            android:layout_alignParentRight="true"
+            android:layout_alignBottom="@+id/ll3" />
+
+    </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/btnMenu"
+        android:src="@drawable/button_menu"
+        android:onClick="myClickHandler"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="@dimen/button_margin"
+        android:layout_marginLeft="@dimen/button_margin"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentBottom="true"/>
+    <ImageView
+        android:id="@+id/btnDice"
+        android:src="@drawable/button_dice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="@dimen/button_margin"
+        android:layout_marginLeft="@dimen/view_horizontal_margin_4"
+        android:layout_marginRight="@dimen/button_margin"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"/>
+    <ImageView
+        android:id="@+id/btnPlayerIcon"
+        android:src="@drawable/button_human_a"
+        android:onClick="myClickHandler"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginLeft="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="@dimen/button_margin"
+        android:layout_toLeftOf="@+id/btnDice"
+        android:layout_alignBottom="@+id/btnMenu"
+        android:layout_alignParentBottom="true"/>
+    <TextView
+        android:id="@+id/btnPlayerName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginLeft="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="@dimen/button_margin"
+        style="@style/c4aTV1"
+        android:background="@color/colorTextBackground"
+        android:textColor="@color/colorText"
+        android:textSize="@dimen/text_size_16"
+        android:paddingLeft="2dp"
+        android:paddingRight="2dp"
+        android:layout_toLeftOf="@+id/btnPlayerIcon"
+        android:layout_alignBottom="@+id/btnMenu"
+        android:layout_alignParentBottom="true"
+        android:hint="@string/yourName" />
+    <TextView
+        android:id="@+id/btnPlayerRound"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="right"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginBottom="0dp"
+        android:layout_marginLeft="@dimen/view_horizontal_margin_4"
+        style="@style/c4aTV1"
+        android:background="@color/colorTextBackground"
+        android:textColor="@color/colorText"
+        android:textSize="@dimen/text_size_16"
+        android:paddingLeft="2dp"
+        android:paddingRight="2dp"
+        android:layout_toLeftOf="@+id/btnDice"
+        android:layout_above="@+id/btnPlayerIcon" />
+    <TextView
+        android:id="@+id/btnPlayerResult"
+        style="@style/c4aTV1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:layout_marginLeft="@dimen/view_horizontal_margin_4"
+        android:background="@color/colorTextBackground"
+        android:textColor="@color/colorText"
+        android:textSize="@dimen/text_size_16"
+        android:paddingLeft="@dimen/button_margin"
+        android:paddingRight="@dimen/button_margin"
+        android:layout_toLeftOf="@+id/btnPlayerRound"
+        android:layout_toRightOf="@+id/btnMenu"
+        android:layout_above="@+id/btnPlayerName" />
+
+    <RelativeLayout
+        android:id="@+id/rl3"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/tableView"
+        android:layout_above="@+id/btnMenu"
+        tools:context="com.androidheads.vienna.escalero.MainActivity">
+
+        <com.androidheads.vienna.escalero.BoardView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/diceBoard"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true" />
+
+    </RelativeLayout>
+
+    <ProgressBar
+        android:id="@+id/progressDialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:visibility="gone" />
+
+</RelativeLayout>

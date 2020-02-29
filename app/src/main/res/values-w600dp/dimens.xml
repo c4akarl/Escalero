@@ -1,0 +1,29 @@
+<resources>
+    <dimen name="activity_horizontal_margin">8dp</dimen>
+    <dimen name="activity_vertical_margin">8dp</dimen>
+    <dimen name="view_horizontal_margin">3dp</dimen>
+    <dimen name="view_horizontal_margin_4">6dp</dimen>
+    <dimen name="view_horizontal_margin_12">18dp</dimen>
+    <dimen name="view_horizontal_margin_30">45dp</dimen>
+    <dimen name="view_margin_10">15dp</dimen>
+    <dimen name="view_size_300">450dp</dimen>
+    <dimen name="button_margin">12dp</dimen>
+    <dimen name="view_vertical_margin">3dp</dimen>
+    <dimen name="view_right_textview">120dp</dimen>
+    <dimen name="tv_height">40dp</dimen>
+    <dimen name="text_size">32sp</dimen>
+    <dimen name="text_size_20">26sp</dimen>
+    <dimen name="text_size_16">20sp</dimen>
+    <dimen name="text_size_min">18sp</dimen>
+    <dimen name="text_size_8sp">12sp</dimen>
+    <dimen name="text_size_max">120sp</dimen>
+    <dimen name="text_size_step_granularity">3sp</dimen>
+    <dimen name="paddingLeft_radioButton">30dp</dimen>
+    <dimen name="margin_0">0dp</dimen>
+    <dimen name="margin_1">2dp</dimen>
+    <dimen name="margin_2">4dp</dimen>
+    <dimen name="view_width_150">200dp</dimen>
+    <dimen name="view_width_40">52dp</dimen>
+    <dimen name="view_width_80">105dp</dimen>
+    <dimen name="view_size_25">30dp</dimen>
+</resources>

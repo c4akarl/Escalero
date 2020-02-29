@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="@drawable/lvitem_background"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="1dip" >
+
+    <CheckBox
+        android:id="@+id/miSelected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/view_horizontal_margin_4"
+        android:clickable="false"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true" />
+
+    <LinearLayout
+        android:id="@+id/line1"
+        android:layout_toRightOf="@id/miSelected"
+        android:weightSum="4"
+        android:orientation="horizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" >
+        <TextView android:id="@+id/miPlayers"
+            style="@style/c4aTV1"
+            android:layout_width="0dp"
+            android:layout_weight="3"
+            android:paddingLeft="3dip"
+            android:layout_marginTop="0dip"
+            android:layout_marginLeft="0dip"
+            android:singleLine="true"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:textColor="@color/text_yellow" />
+        <TextView android:id="@+id/miVariant"
+            style="@style/c4aTV1"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:paddingLeft="3dip"
+            android:layout_marginTop="0dip"
+            android:layout_marginLeft="0dip"
+            android:layout_marginRight="@dimen/view_horizontal_margin_4"
+            android:gravity="right"
+            android:singleLine="true"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:textColor="@color/text_yellow" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/line2"
+        android:layout_below="@id/line1"
+        android:layout_toRightOf="@id/miSelected"
+        android:weightSum="5"
+        android:orientation="horizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" >
+        <TextView android:id="@+id/miStatus"
+            style="@style/c4aTV1"
+            android:layout_width="0dp"
+            android:layout_weight="3"
+            android:paddingLeft="3dip"
+            android:layout_marginTop="0dip"
+            android:layout_marginLeft="0dip"
+            android:singleLine="true"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:textColor="@color/text_yellow" />
+        <TextView android:id="@+id/miTime"
+            style="@style/c4aTV1"
+            android:layout_width="0dp"
+            android:layout_weight="2"
+            android:paddingLeft="3dip"
+            android:layout_marginTop="0dip"
+            android:layout_marginLeft="0dip"
+            android:layout_marginRight="@dimen/view_horizontal_margin_4"
+            android:gravity="right"
+            android:singleLine="true"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:textColor="@color/text_yellow" />
+    </LinearLayout>
+
+</RelativeLayout>

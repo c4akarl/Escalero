@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+                 android:layout_width="fill_parent"
+                 android:layout_height="wrap_content"
+                 android:layout_marginTop="@dimen/activity_vertical_margin"
+                 android:layout_marginBottom="@dimen/activity_vertical_margin"
+                 android:background="@color/colorBlack">
+
+    <ImageView
+        android:id="@+id/escaleroIcon"
+        android:src="@drawable/icon_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_0"
+        android:layout_marginBottom="@dimen/margin_0"
+        android:layout_marginStart="@dimen/button_margin"
+        android:layout_marginLeft="@dimen/button_margin"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true" />
+    <ImageView
+        android:id="@+id/gamesIcon"
+        android:src="@drawable/icon_firebase"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/margin_0"
+        android:layout_marginBottom="@dimen/margin_0"
+        android:layout_marginEnd="@dimen/button_margin"
+        android:layout_marginRight="@dimen/button_margin"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true" />
+    <TextView
+        android:id="@+id/matchTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@+id/escaleroIcon"
+        android:layout_toLeftOf="@+id/gamesIcon"
+        android:gravity="center_horizontal"
+        android:textColor="@color/colorDiceB"
+        android:textSize="36dp"
+        android:text="@string/appLabel" />
+
+    <View
+        android:id="@+id/sep1"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_below="@id/matchTitle"
+        android:layout_marginTop="@dimen/margin_0"
+        android:layout_marginBottom="@dimen/view_vertical_margin"
+        android:background="@color/colorHoldNewGame"/>
+
+    <TextView
+        android:id="@+id/mesTitle"
+        android:layout_below="@id/sep1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/view_margin_10"
+        android:layout_marginBottom="@dimen/view_margin_10"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size" />
+
+    <TextView
+        android:id="@+id/mes"
+        android:layout_below="@id/mesTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="@dimen/view_margin_10"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size_16" />
+
+    <TextView
+        android:id="@+id/messageAction"
+        android:layout_below="@id/mes"
+        style="@style/c4aTV4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/view_margin_10"
+        android:paddingLeft="@dimen/view_margin_10"
+        android:paddingEnd="@dimen/view_margin_10"
+        android:paddingRight="@dimen/view_margin_10"
+        android:background="@drawable/rectangleyellow"
+        android:layout_centerInParent="true"
+        android:text="@string/ok" />
+
+</RelativeLayout>
