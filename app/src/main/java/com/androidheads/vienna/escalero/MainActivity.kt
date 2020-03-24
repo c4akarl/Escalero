@@ -737,7 +737,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             })
     }
 
-    private suspend fun cancelMatch(matchId: String, playerIdA: String?, playerIdB: String?): Boolean = suspendCoroutine { continuation ->
+    private suspend fun cancelMatch(deleteMatch: Boolean, matchId: String, playerIdA: String?, playerIdB: String?): Boolean = suspendCoroutine { continuation ->
 
 //        Log.i(TAG, "cancelMatch(), matchId: $matchId, playerIdA: $playerIdA, playerIdB: $playerIdB")
 
@@ -750,14 +750,18 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             refOponent.removeValue()
         }
 
-        val ref = FirebaseDatabase.getInstance().getReference("matches/$matchId")
-        ref.removeValue()
-            .addOnSuccessListener {
-                continuation.resume(true)
-            }
-            .addOnFailureListener {
-                continuation.resume(false)
-            }
+        if (deleteMatch) {
+            val ref = FirebaseDatabase.getInstance().getReference("matches/$matchId")
+            ref.removeValue()
+                    .addOnSuccessListener {
+                        continuation.resume(true)
+                    }
+                    .addOnFailureListener {
+                        continuation.resume(false)
+                    }
+        }
+        else
+            continuation.resume(true)
 
     }
 
@@ -912,6 +916,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 //                    Log.i(TAG, "quickMatchUpdateListener(), userId: $userId")
 
                     if (dialogQuickMatchInvitation.isShowing)
+                        //error 20200327 java.lang.IllegalArgumentException: at android.view.WindowManagerGlobal.findViewLocked (WindowManagerGlobal.java:534)
                         dialogQuickMatchInvitation.dismiss()
 
                     if (!prefs.getBoolean("playOnline", false)) {
@@ -1583,7 +1588,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                     setNoActiveMatch()
                                     if (tsServer - tsIntent <= NOTIFICATION_DELAY)
                                         showInfoDialog(getString(R.string.info), getString(R.string.playerNotAvailable, fromUsername), getString(R.string.ok))
-                                    startRemoveMatch(matchId, null, null)
+                                    startRemoveMatch(true, matchId, null, null)
                                 }
                                 else -> {
                                     if (tsServer - tsIntent <= NOTIFICATION_DELAY)
@@ -3471,7 +3476,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 setRelativeLayout(diceState)
             }
         }
-        ed.isPlayerColumn = prefs.getBoolean("isPlayerColumn", false)
+        ed.isPlayerColumn = prefs.getBoolean("isPlayerColumn", true)
         ed.isSummation = prefs.getBoolean("isSummation", false)
         if (ed.playerNumber == 3) {
             ed.isFlipScreen = false
@@ -5295,9 +5300,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 //                        Log.d(TAG, "showMatchDialog(), matchId: $matchId, mbd: $mbd")
 
                         if (mbd != null)
-                            startRemoveMatch(matchId, mbd.playerIdA!!, mbd.playerIdB!!)
+                            startRemoveMatch(true, matchId, mbd.playerIdA!!, mbd.playerIdB!!)
                         else
-                            startRemoveMatch(matchId, mPlayerId, null)
+                            startRemoveMatch(true, matchId, mPlayerId, null)
 
                     }
                 }
@@ -5481,7 +5486,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 val matchTimestamp = defferedGetMatchTimestamp.await().toLong()
                 defferedGetMatchTimestamp.cancel()
                 val time = getUpdateTime(matchTimestamp, serverTimestamp)
-                val title = "${getString(R.string.continueMatchTitle)} ($gameType) \n$time"
+                var type = ""
+                if (!mMatchBaseData!!.singleGame!!)
+                    type = "($gameType)"
+                val title = "${getString(R.string.continueMatchTitle)} $type \n$time"
                 dialogTwoBtn.mes2Title.text = title
                 val players = "${mMatchBaseData!!.nameA} - ${mMatchBaseData!!.nameB}"
                 dialogTwoBtn.mes2.text = players
@@ -5726,7 +5734,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 val matchTimestamp = defferedGetMatchTimestamp.await().toLong()
                 defferedGetMatchTimestamp.cancel()
                 val time = getUpdateTime(matchTimestamp, serverTimestamp)
-                title = "${getString(R.string.continueMatchTitle)} ($gameType) \n$time"
+                var type = ""
+                if (!mMatchBaseData!!.singleGame!!)
+                    type = "($gameType)"
+                title = "${getString(R.string.continueMatchTitle)} $type \n$time"
 
                 if (baseData != null) {
                     showDialog = true
@@ -5982,7 +5993,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
                     matchCanceled(mOponentId!!, mMatchId!!, "8")
-                    startRemoveMatch(mMatchId!!, mPlayerId!!, mOponentId!!)
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
                 }
             }
             dialogRematch.dismiss()
@@ -5991,7 +6002,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
                     matchCanceled(mOponentId!!, mMatchId!!, "8")
-                    startRemoveMatch(mMatchId!!, mPlayerId!!, mOponentId!!)
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
                 }
             }
             dialogRematch.dismiss()
@@ -6037,8 +6048,8 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         dialogTwoBtn.setOnCancelListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
-                    matchCanceled(mOponentId!!, mMatchId!!, "9")
-                    startRemoveMatch(mMatchId!!, mPlayerId!!, mOponentId!!)
+                    matchCanceled(mOponentId!!, mMatchId!!, "8")
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
                 }
             }
             dialogTwoBtn.dismiss()
@@ -6046,8 +6057,8 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         dialogTwoBtn.action1.setOnClickListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
-                    matchCanceled(mOponentId!!, mMatchId!!, "9")
-                    startRemoveMatch(mMatchId!!, mPlayerId!!, mOponentId!!)
+                    matchCanceled(mOponentId!!, mMatchId!!, "8")
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
                 }
             }
             dialogTwoBtn.dismiss()
@@ -6222,7 +6233,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             if (checkConnectivity(false) && mMatchId != null && mOponentId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
                     matchCanceled(mOponentId!!, mMatchId!!, "9")
-                    startRemoveMatch(mMatchId!!, mPlayerId!!, mOponentId!!)
+                    startRemoveMatch(true, mMatchId!!, mPlayerId!!, mOponentId!!)
                 }
             }
             dialogTwoBtn.dismiss()
@@ -6347,37 +6358,49 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 dialogPlayOnline.rb_single.isChecked = false
             }
             dialogPlayOnline.rb_single.setOnClickListener {
-                if (!ed.isSingleGame) {
-                    ed.isSingleGame = true
-                    val edi = prefs.edit()
-                    edi.putBoolean("isSingleGame", ed.isSingleGame)
-                    edi.apply()
-                    dialogPlayOnline.rb_single.isChecked = true
-                    dialogPlayOnline.rb_double.isChecked = false
-                    updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
-                    isInitBoard = true
-                    handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
-                    handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
+                if (isOnlineActive) {
+                    showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
+                    dialogPlayOnline.dismiss()
+                }
+                else {
+                    if (!ed.isSingleGame) {
+                        ed.isSingleGame = true
+                        val edi = prefs.edit()
+                        edi.putBoolean("isSingleGame", ed.isSingleGame)
+                        edi.apply()
+                        dialogPlayOnline.rb_single.isChecked = true
+                        dialogPlayOnline.rb_double.isChecked = false
+                        updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
+                        isInitBoard = true
+                        handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
+                        handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
 
-    //                Log.d(TAG, "showPlayOnlineDialog(), rb_single, ed.isSingleGame: ${ed.isSingleGame}")
+                        //                Log.d(TAG, "showPlayOnlineDialog(), rb_single, ed.isSingleGame: ${ed.isSingleGame}")
 
+                    }
                 }
             }
             dialogPlayOnline.rb_double.setOnClickListener {
-                if (ed.isSingleGame) {
-                    ed.isSingleGame = false
-                    val edi = prefs.edit()
-                    edi.putBoolean("isSingleGame", ed.isSingleGame)
-                    edi.apply()
-                    dialogPlayOnline.rb_double.isChecked = true
-                    dialogPlayOnline.rb_single.isChecked = false
-                    updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
-                    isInitBoard = true
-                    handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
-                    handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
+                if (isOnlineActive) {
+                    showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
+                    dialogPlayOnline.dismiss()
+                }
+                else {
+                    if (ed.isSingleGame) {
+                        ed.isSingleGame = false
+                        val edi = prefs.edit()
+                        edi.putBoolean("isSingleGame", ed.isSingleGame)
+                        edi.apply()
+                        dialogPlayOnline.rb_double.isChecked = true
+                        dialogPlayOnline.rb_single.isChecked = false
+                        updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
+                        isInitBoard = true
+                        handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
+                        handlerAnimationDices.postDelayed(mUpdateAnimationDices, 50)
 
-    //                Log.d(TAG, "showPlayOnlineDialog(), rb_double, ed.isSingleGame: ${ed.isSingleGame}")
+                        //                Log.d(TAG, "showPlayOnlineDialog(), rb_double, ed.isSingleGame: ${ed.isSingleGame}")
 
+                    }
                 }
 
     //            Log.d(TAG, "showPlayOnlineDialog(), dialogPlayOnline.rb_double, clicked")
@@ -7310,7 +7333,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                             setNoActiveMatch()
                                             if (tsServer - tsIntent <= NOTIFICATION_DELAY)
                                                 showInfoDialog(getString(R.string.info), getString(R.string.playerNotAvailable, fromUsername), getString(R.string.ok))
-                                            startRemoveMatch(matchId, null, null)
+                                            startRemoveMatch(true, matchId, null, null)
                                         }
                                         else -> {
                                             if (tsServer - tsIntent <= NOTIFICATION_DELAY)
@@ -7506,7 +7529,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
                     if (checkUpdateData != null && mOponentId != null) {
                         if (checkUpdateData.position == "") {
-                            startRemoveMatch(mMatchId!!, mPlayerId!!, mOponentId!!)
+                            startRemoveMatch(true, mMatchId!!, mPlayerId!!, mOponentId!!)
                         }
                         else {
                             if (isDoingTurn)
@@ -7782,10 +7805,20 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.d(TAG, "setMatchData(), ed.selectedGridItem: ${ed.selectedGridItem}, gridPosition: $gridPosition")
 
-        if (ed.selectedGridItem > 0 && gridPosition > 0)
-            mMatchUpdateData!!.gridItem = gridPosition.toLong()
-        else
-            mMatchUpdateData!!.gridItem = ed.selectedGridItem.toLong()
+        var selectedGrid = ed.selectedGridItem
+        if (ed.selectedGridItem > 0 && gridPosition > 0) {
+            selectedGrid = gridPosition
+            if (!ed.isPlayerColumn) {
+                val gridId = ed.gridCurrent[selectedGrid]
+                for (i in EscaleroData.GRID_PLAY_PLAYER2.indices) {
+                    if (EscaleroData.GRID_PLAY_PLAYER2[i] == gridId) {
+                        selectedGrid = i
+                        break
+                    }
+                }
+            }
+        }
+        mMatchUpdateData!!.gridItem = selectedGrid.toLong()
 
         mMatchUpdateData!!.onlineAction = onlineAction
         mMatchUpdateData!!.starter = ed.playerStart.toString()
@@ -7879,7 +7912,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                             val info = "${mMatchBaseData!!.nameA} - ${mMatchBaseData!!.nameB}\n\n${getString(R.string.differentAppVersions)}"
                             showInfoDialog(getString(R.string.info), info, getString(R.string.ok))
                             matchCanceled(mOponentId!!, mMatchId!!, "9")
-                            startRemoveMatch(mMatchId!!, mMatchBaseData!!.playerIdA!!, mMatchBaseData!!.playerIdB!!)
+                            startRemoveMatch(true, mMatchId!!, mMatchBaseData!!.playerIdA!!, mMatchBaseData!!.playerIdB!!)
                             return
                         }
                     }
@@ -8170,6 +8203,15 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         edi.putString("diceDouble1", str)
 
         edi.putInt("selectedGridItem", matchUpdateData.gridItem!!.toInt())
+        if (!ed.isPlayerColumn && matchUpdateData.gridItem!! > 0) {
+            val gridId = EscaleroData.GRID_PLAY_PLAYER2[matchUpdateData.gridItem!!.toInt()]
+            for (i in EscaleroData.GRID_COL_PLAYER2.indices) {
+                if (EscaleroData.GRID_COL_PLAYER2[i] == gridId) {
+                    edi.putInt("selectedGridItem", i)
+                    break
+                }
+            }
+        }
 
         val position = matchUpdateData.position
         if (position == "") {
@@ -8251,9 +8293,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     }
 
-    private fun startRemoveMatch(matchId: String, playerIdA: String?, playerIdB: String?) {
+    private fun startRemoveMatch(deleteMatch: Boolean, matchId: String, playerIdA: String?, playerIdB: String?) {
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedCancelMatch = async { cancelMatch(matchId, playerIdA, playerIdB) }
+            val defferedCancelMatch = async { cancelMatch(deleteMatch, matchId, playerIdA, playerIdB) }
             val isRemoved = defferedCancelMatch.await()
             defferedCancelMatch.cancel()
             if (isRemoved || !isRemoved) {

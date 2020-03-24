@@ -71,7 +71,7 @@ class Preferences : Activity() {
         unit.setText(prefs.getString("unit", resources.getString(R.string.points)))
         bonusServed.setText(String.format("%d", prefs.getInt("bonusServed", 5)))
         bonusServedGrande.setText(String.format("%d", prefs.getInt("bonusServedGrande", 30)))
-        isPlayerColumn = prefs.getBoolean("isPlayerColumn", false)
+        isPlayerColumn = prefs.getBoolean("isPlayerColumn", true)
         cbSummation!!.isChecked = prefs.getBoolean("isSummation", false)
         cbSounds!!.isChecked = prefs.getBoolean("sounds", true)
         cbFlipScreen!!.isChecked = prefs.getBoolean("computeFlipScreen", false)

@@ -709,7 +709,7 @@ open class EscaleroData(private val context: Context, runPrefs: SharedPreference
         computeNextPlayerToMove(playerToMove)
         computePrevPlayerToMove(playerToMove)
         isSingleGame = prefs.getBoolean("isSingleGame", true)
-        isPlayerColumn = prefs.getBoolean("isPlayerColumn", false)
+        isPlayerColumn = prefs.getBoolean("isPlayerColumn", true)
         isSummation = prefs.getBoolean("isSummation", false)
         isFlipScreen = prefs.getBoolean("computeFlipScreen", false)
 
