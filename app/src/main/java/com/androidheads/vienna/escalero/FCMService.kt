@@ -1,5 +1,6 @@
 package com.androidheads.vienna.escalero
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -7,6 +8,7 @@ import com.google.firebase.messaging.RemoteMessage
 
 
 
+@SuppressLint("MissingFirebaseInstanceTokenRefresh")
 class FCMService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -45,7 +47,7 @@ class FCMService : FirebaseMessagingService() {
 //    override fun onNewToken(token: String) {
 //        super.onNewToken(token)
 //
-//        sendRegistrationToServer(token)
+//       sendRegistrationToServer(token)
 //
 //    }
 

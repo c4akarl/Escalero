@@ -29,7 +29,7 @@ import android.graphics.*
 import android.media.AudioManager
 import android.media.SoundPool
 import android.net.ConnectivityManager
-import android.net.NetworkInfo
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -792,8 +792,11 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                             }
 
                             val defferedGetMatchTimestamp = async { getMatchTimestamp(matchId) }
-                            val timestamp = defferedGetMatchTimestamp.await().toLong()
+                            var timestamp = defferedGetMatchTimestamp.await().toLong()
                             defferedGetMatchTimestamp.cancel()
+
+                            if (timestamp == 0L && mTimestampPre > 0L)
+                                timestamp = mTimestampPre + 100L
 
                             if (mTimestampPre == 0L && isDoingTurn)
                                 mTimestampPre = timestamp
@@ -883,8 +886,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                             }
                             else {
                                 if (timestamp == 0L) {
-                                    Toast.makeText(applicationContext, "ONLINE_ACTIVE_TURN, " + getString(R.string.dataUpdateProblem), Toast.LENGTH_SHORT).show()
-                                    playSound(1, 3)
+                                    matchDataToDb(false, getPausedStatus())
+                                    showInfoDialog(getString(R.string.matchBreak), getString(R.string.dataUpdateProblem), getString(R.string.ok))
+                                    diceBoard.mOnlinePlayers = ""
+                                    diceBoard.updateBoard(diceRoll, diceHold, diceDouble1, false, 1, initRollValues)
                                 }
                             }
                         }
@@ -1230,8 +1235,19 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 ref.removeEventListener(this)
             }
             override fun onCancelled(error:DatabaseError) {
-                continuation.resume("0")
-                ref.removeEventListener(this)
+
+//Log.i(TAG, "getTimestampFromServer(), error.code: ${error.code}, mTimestampPre: $mTimestampPre")
+
+                try {
+                    if (error.code == DatabaseError.PERMISSION_DENIED) {
+                        if (mTimestampPre > 0)
+                            continuation.resume((mTimestampPre + 100L).toString())
+                        else
+                            continuation.resume("0")
+                    }
+                }
+                catch (e : IllegalStateException) { }
+
             }
         })
     }
@@ -2854,11 +2870,18 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
             RC_SIGN_IN -> {
                 val result = Auth.GoogleSignInApi.getSignInResultFromIntent(data)
-                if (result.isSuccess) {
-                  // The signed in account is stored in the result.
-                    val signedInAccount = result.signInAccount
-                    onConnected(signedInAccount, true)
-                } else {
+                if (result != null) {
+                    if (result.isSuccess) {
+                        // The signed in account is stored in the result.
+                        val signedInAccount = result.signInAccount
+                        onConnected(signedInAccount, true)
+                    }
+                    else {
+                        onDisconnected()
+                        showErrorMessage(R.string.notLoggedIn)
+                    }
+                }
+                else {
                     onDisconnected()
                     showErrorMessage(R.string.notLoggedIn)
                 }
@@ -4152,7 +4175,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         val enginePlayerB = java.lang.Boolean.valueOf(pg.getTag("EnginePlayerB"))
         val enginePlayerC = java.lang.Boolean.valueOf(pg.getTag("EnginePlayerC"))
         var enginePlayer = false
-        if ((enginePlayerA == true) or (enginePlayerB == true) or (enginePlayerC == true))
+        if ((enginePlayerA) or (enginePlayerB) or (enginePlayerC))
             enginePlayer = true
         ed.putBoolean("enginePlayer", enginePlayer)
         ed.putBoolean("enginePlayerA", enginePlayerA)
@@ -7097,8 +7120,24 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     //ONLINE - methods, signing
     private fun checkConnectivity(isSignOut: Boolean): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork: NetworkInfo? = connectivityManager.activeNetworkInfo
-        val isConnected: Boolean = activeNetwork?.isConnected == true
+        val isConnected: Boolean
+
+        isConnected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val nw      = connectivityManager.activeNetwork ?: return false
+            val actNw = connectivityManager.getNetworkCapabilities(nw) ?: return false
+            when {
+                actNw.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+                actNw.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+                else -> false
+            }
+        }
+        else
+        @Suppress("DEPRECATION")
+        {
+            val nwInfo = connectivityManager.activeNetworkInfo ?: return false
+            nwInfo.isConnected
+        }
+
         if (!isConnected && !isSignOut)
             showInfoDialog(getString(R.string.warningTitle), getString(R.string.noInternet), getString(R.string.ok))
         return isConnected
@@ -7235,9 +7274,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                     initOnline()
                                 }
                             }
-                            //karl???
-//                            else
-//                                matchDataToDb(true, getPausedStatus())
                         }
                     }
 
@@ -7569,7 +7605,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         btnDice.setImageResource(R.drawable.button_play)
         btnPlayerResult.visibility = TextView.VISIBLE
         var playerResult = ""
-        val playerResultCheck = getString(R.string.waitingForPlayer).toString().subSequence(0, 5)
+        val playerResultCheck = getString(R.string.waitingForPlayer).subSequence(0, 5)
         if (btnPlayerResult.text.length >= 5)
             playerResult = btnPlayerResult.text.subSequence(0, 5).toString()
         if (playerResult != playerResultCheck) {
