@@ -1,6 +1,6 @@
 /*
     Escalero - An Android dice program.
-    Copyright (C) 2016-2019  Karl Schreiner, c4akarl@gmail.com
+    Copyright (C) 2016-2020  Karl Schreiner, c4akarl@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -108,7 +108,6 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
                 val returnIntent = Intent()
                 when (fileActionCode) {
                     FILE_MANAGER_LOAD_REQUEST_CODE -> {
-//                        setPrefs(gameData)
                         setFilePrefs()
                         returnIntent.putExtra("gameData", gameData)
                         setResult(RESULT_OK, returnIntent)
@@ -121,7 +120,13 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
                             pg!!.dataToFile(etPath.text.toString(), etFile.text.toString(), gameData!!)
                             setFilePrefs()
                             isFinish = true
-                            FileTask(this).execute(etPath.text.toString(), etFile.text.toString())
+
+//                            Log.i(TAG, "myClickHandler(), R.id.btnOk, etFile.text: ${etFile.text}")
+
+                            if (etFile.text.toString().endsWith(EXTENSION_PGND))
+                                FileTask(this).execute(etPath.text.toString(), etFile.text.toString())
+                            else
+                                showTextDialog(resources.getString(R.string.extensionMissing))
                             return
                         } else {
                             if ((fileActionCode == FILE_MANAGER_SAVE_REQUEST_CODE) and (gameCounter >= MAX_GAMES))
@@ -176,7 +181,11 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
 
     private fun getFilePrefs() {
         pg = Pgnd("")
+        @Suppress("DEPRECATION")
         externalStorageDirectory = Environment.getExternalStorageDirectory().absolutePath + "/"
+
+//        Log.i(TAG, "getFilePrefs(), externalStorageDirectory: $externalStorageDirectory")
+
         var path: String? = externalStorageDirectory
         var file: String? = ""
         when (fileActionCode) {
@@ -208,149 +217,6 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
         return
 
     }
-
-//    private fun setPrefs(gameData: String?) {
-//        if (gameData == "")
-//            return
-//
-//        pg = Pgnd(gameData!!)
-//
-//        val position = pg!!.getTag("Position")
-//
-//        val ed = prefs.edit()
-//        ed.putBoolean("isSingleGame", java.lang.Boolean.valueOf(pg!!.getTag("SingleGame")))
-//        ed.putInt("players", Integer.parseInt(pg!!.getTag("Player")))
-//        val enginePlayerA = java.lang.Boolean.valueOf(pg!!.getTag("EnginePlayerA"))
-//        val enginePlayerB = java.lang.Boolean.valueOf(pg!!.getTag("EnginePlayerB"))
-//        val enginePlayerC = java.lang.Boolean.valueOf(pg!!.getTag("EnginePlayerC"))
-//        var enginePlayer = false
-//        if ((enginePlayerA == true) or (enginePlayerB == true) or (enginePlayerC == true))
-//            enginePlayer = true
-//        ed.putBoolean("enginePlayer", enginePlayer)
-//        ed.putBoolean("enginePlayerA", enginePlayerA)
-//        ed.putBoolean("enginePlayerB", enginePlayerB)
-//        ed.putBoolean("enginePlayerC", enginePlayerC)
-//        ed.putString("nameA", pg!!.getTag("NameA"))
-//        ed.putString("nameB", pg!!.getTag("NameB"))
-//        ed.putString("nameC", pg!!.getTag("NameC"))
-//        ed.putBoolean("gameFromFile", true)
-//        ed.putInt("dice", Integer.parseInt(pg!!.getTag("DiceState")))
-//        ed.putInt("icons", Integer.parseInt(pg!!.getTag("Icons")))
-//        ed.putBoolean("isPlayerColumn", java.lang.Boolean.valueOf(pg!!.getTag("PlayerColumn")))
-//        val colStr = pg!!.getTag("ColPoints")!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-//        if (colStr.size == 4) {
-//            ed.putInt("pointsCol1", Integer.parseInt(colStr[0]))
-//            ed.putInt("pointsCol2", Integer.parseInt(colStr[1]))
-//            ed.putInt("pointsCol3", Integer.parseInt(colStr[2]))
-//            ed.putInt("pointsBon", Integer.parseInt(colStr[3]))
-//        }
-//        ed.putInt("multiplier", Integer.parseInt(pg!!.getTag("ColMultiplier")))
-//        ed.putString("unit", pg!!.getTag("Unit"))
-//        ed.putInt("bonusServed", Integer.parseInt(pg!!.getTag("BonusServed")))
-//        ed.putInt("bonusServedGrande", Integer.parseInt(pg!!.getTag("BonusServedGrande")))
-//        ed.putBoolean("isSummation", java.lang.Boolean.valueOf(pg!!.getTag("Summation")))
-//        ed.putBoolean("sounds", java.lang.Boolean.valueOf(pg!!.getTag("Sounds")))
-//        ed.putBoolean("computeFlipScreen", java.lang.Boolean.valueOf(pg!!.getTag("FlipScreen")))
-//        ed.putBoolean("logging", java.lang.Boolean.valueOf(pg!!.getTag("Logging")))
-//        ed.putBoolean("advertising", java.lang.Boolean.valueOf(pg!!.getTag("Advertising")))
-//
-//        if (position == "")
-//            ed.putBoolean("cbNewGame", true)
-//        else
-//            ed.putBoolean("cbNewGame", false)
-//
-//        ed.apply()
-//
-//        val edi = runPrefs.edit()
-//        if (pg!!.getTag("Starter") != "")
-//            edi.putString("playerStart", "" + pg!!.getTag("Starter")!!)
-//        if (pg!!.getTag("PlayerToMove") != "")
-//            edi.putString("playerToMove", "" + pg!!.getTag("PlayerToMove")!!)
-//        if (gameData != "") {
-//            edi.putString("\$E1", pg!!.getTag("\$E1"))
-//            edi.putString("\$E2", pg!!.getTag("\$E2"))
-//            edi.putString("\$E3", pg!!.getTag("\$E3"))
-//            edi.putInt("selectedGridItem", Integer.parseInt(pg!!.getTag("GridItem")))
-//            edi.putBoolean("isDiced", java.lang.Boolean.valueOf(pg!!.getTag("Diced")))
-//            edi.putBoolean("isServed", java.lang.Boolean.valueOf(pg!!.getTag("Served")))
-//            edi.putInt("diceModus", Integer.parseInt(pg!!.getTag("DiceModus")))
-//            edi.putInt("diceModusPrev", Integer.parseInt(pg!!.getTag("DiceModusPrev")))
-//            var str = ""
-//            var tmp = pg!!.getTag("DiceRoll")
-//            for (i in 0 until tmp!!.length) {
-//                str =
-//                    if (tmp[i] == '-')
-//                        "$str-1 "
-//                    else
-//                        str + tmp[i] + " "
-//            }
-//            edi.putString("diceRoll", str)
-//            str = ""
-//            tmp = pg!!.getTag("DiceHold")
-//            for (i in 0 until tmp!!.length) {
-//                str =
-//                    if (tmp[i] == '-')
-//                        "$str-1 "
-//                    else
-//                        str + tmp[i] + " "
-//            }
-//            edi.putString("diceHold", str)
-//            str = ""
-//            tmp = pg!!.getTag("DiceRollPrev")
-//            for (i in 0 until tmp!!.length) {
-//                str =
-//                    if (tmp[i] == '-')
-//                        "$str-1 "
-//                    else
-//                        str + tmp[i] + " "
-//            }
-//            edi.putString("diceRollPrev", str)
-//            str = ""
-//            tmp = pg!!.getTag("DiceHoldPrev")
-//            for (i in 0 until tmp!!.length) {
-//                str =
-//                    if (tmp[i] == '-')
-//                        "$str-1 "
-//                    else
-//                        str + tmp[i] + " "
-//            }
-//            edi.putString("diceHoldPrev", str)
-//            str = ""
-//            tmp = pg!!.getTag("DiceDouble1")
-//            for (i in 0 until tmp!!.length) {
-//                str =
-//                    if (tmp[i] == '-')
-//                        "$str-1 "
-//                    else
-//                        str + tmp[i] + " "
-//            }
-//            edi.putString("diceDouble1", str)
-//            edi.putBoolean("isDouble1", java.lang.Boolean.valueOf(pg!!.getTag("Double1")))
-//            edi.putBoolean("isServedDouble1", java.lang.Boolean.valueOf(pg!!.getTag("ServedDouble1")))
-//
-//            if (position == "") {
-//                edi.putInt("diceModus", 0)
-//                edi.putInt("diceModusPrev", 0)
-//                val ini = "-1 -1 -1 -1 -1 "
-//                edi.putString("diceRoll", ini)
-//                edi.putString("diceHold", ini)
-//                edi.putString("diceRollPrev", ini)
-//                edi.putString("diceHoldPrev", ini)
-//                edi.putString("diceDouble1", ini)
-//            } else {
-//                val textStr = position!!.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-//                for (i in textStr.indices) {
-//                    if (textStr[i].startsWith("setcol ")) {
-//                        val tmpStr = textStr[i].split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-//                        val id = tmpStr[1] + tmpStr[2]
-//                        val value = tmpStr[3].replace("-", "-1")
-//                        edi.putString(id, value)
-//                    }
-//                }
-//            }
-//        }
-//        edi.apply()
-//    }
 
     private fun setFilePrefs() {
         val ed = filePrefs.edit()
@@ -401,7 +267,7 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
             return oldPath
         var newPath = ""
         var lastDirPos = 0
-        for (i in 0 until oldPath.length) {
+        oldPath.forEachIndexed { i, _ ->
             if ((oldPath[i] == '/') and (i != oldPath.length - 1))
                 lastDirPos = i + 1
         }
@@ -412,7 +278,7 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
 
     private fun showTextDialog(text: String) {
         val alertDialog = AlertDialog.Builder(this).create()
-        alertDialog.setTitle(resources.getString(R.string.menuInfo))
+        alertDialog.setTitle(resources.getString(R.string.menuInfo, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE))
         alertDialog.setMessage(text)
         alertDialog.show()
     }
@@ -433,7 +299,7 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
                 return activity.pg!!.getGameListFromGames(path, file)
             } else {
                 fileControl = 2    // file list
-                val fileA: Array<String>
+                val fileA: Array<String>?
                 var fileB: Array<String>
                 var f = File(path)
                 if (f.isDirectory) {
@@ -454,13 +320,12 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
                                 x++
                             }
                         }
-                        val tempList = Arrays.asList(*fileB)
+                        val tempList = mutableListOf(*fileB)
                         tempList.sort()
                         Collections.sort(tempList, SortIgnoreCase())
                         fileB = tempList.toTypedArray()
                         return fileB
                     }
-                    // 20190514 06:23 in der App-Version 37, java.lang.IllegalStateException
                     catch (e: IllegalStateException) { }
                     catch (e: SecurityException) { }
                     catch (e: NullPointerException) { }

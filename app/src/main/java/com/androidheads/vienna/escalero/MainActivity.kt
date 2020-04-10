@@ -592,7 +592,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     private var matchCheckAll = false
 
     private lateinit var dialogPlayerQuery: Dialog
-    private var isShowingPlayerQuery = false
+//    private var isShowingPlayerQuery = false
     private lateinit var userListArray: ArrayList<UserList>
 
     private lateinit var dialogPlayOnline: Dialog
@@ -6701,13 +6701,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.i(TAG, "showPlayerQuery(), start")
 
-        if (!isShowingPlayerQuery) {
-            dialogPlayerQuery = Dialog(this, android.R.style.Theme_Light)
-            dialogPlayerQuery.requestWindowFeature(Window.FEATURE_NO_TITLE)
-            dialogPlayerQuery.setContentView(R.layout.dialogplayerquery)
-        }
-
-        isShowingPlayerQuery = false
+        dialogPlayerQuery = Dialog(this, android.R.style.Theme_Light)
+        dialogPlayerQuery.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialogPlayerQuery.setContentView(R.layout.dialogplayerquery)
 
         dialogPlayOnline.dismiss()
 
@@ -6733,7 +6729,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             edi.putInt("playerQueryId", 1)
             edi.apply()
             dialogPlayerQuery.dismiss()
-            isShowingPlayerQuery = true
             showPlayerQuery()
         }
         dialogPlayerQuery.playerOftenActive.setOnClickListener {
@@ -6741,7 +6736,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             edi.putInt("playerQueryId", 2)
             edi.apply()
             dialogPlayerQuery.dismiss()
-            isShowingPlayerQuery = true
             showPlayerQuery()
         }
         dialogPlayerQuery.playerLeaderboard.setOnClickListener {
@@ -6749,7 +6743,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             edi.putInt("playerQueryId", 3)
             edi.apply()
             dialogPlayerQuery.dismiss()
-            isShowingPlayerQuery = true
             showPlayerQuery()
         }
 
@@ -6867,7 +6860,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                             showPlayerQueryDialog(user, getString(R.string.invitationNewGame, gameType),
                                                     mes, getString(R.string.appCancel), getString(R.string.invitationTitle))
                                         else {
-                                            //karl??? match deleted? active?
                                             showInfoDialog(getString(R.string.info), getString(R.string.playerNotAvailable, user.name), getString(R.string.ok))
                                         }
                                     }

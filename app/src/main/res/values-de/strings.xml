@@ -265,5 +265,6 @@
     <string name="currentlyNoAds">Derzeit gibt es keine Werbung. Versuche es später noch einmal.</string>
 	<string name="differentAppVersions">Ungleiche App-Versionen. Der aktuelle Vorgang wurde abgebrochen.</string>
 	<string name="correctionNextPlayer">Korrektur! Nächster Spieler: %1$s</string>
+	<string name="extensionMissing">Dateiendung \".pgnd\" fehlt.</string>
 
 </resources>

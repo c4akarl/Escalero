@@ -273,5 +273,6 @@
 	<string name="currentlyNoAds">There is currently no advertising. Please try again later.</string>
     <string name="differentAppVersions">Different app versions. The current process was canceled.</string>
 	<string name="correctionNextPlayer">Correction! Next player: %1$s</string>
+	<string name="extensionMissing">The file extension \".pgnd\" is missing.</string>
 
 </resources>
