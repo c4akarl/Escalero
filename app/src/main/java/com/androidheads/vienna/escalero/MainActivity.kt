@@ -741,6 +741,9 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
 //        Log.i(TAG, "cancelMatch(), matchId: $matchId, playerIdA: $playerIdA, playerIdB: $playerIdB")
 
+        if (matchId.isEmpty())
+            continuation.resume(true)
+
         if (playerIdA != null) {
             val refPlayer = FirebaseDatabase.getInstance().getReference("userMatches/$playerIdA/$matchId")
             refPlayer.removeValue()
@@ -4148,6 +4151,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             btnPlayerRound.visibility = TextView.INVISIBLE
 
 //        Log.i(TAG, "B setBtnPlayer(), setOnlineMessage()")
+
         setOnlineMessage()
 
     }
@@ -6640,20 +6644,22 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
                                     if (um != null) {
                                         val matchId = um.matchId!!
-                                        GlobalScope.launch(Dispatchers.Main) {
-                                            val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                                            val baseData = defferedGetMatchBaseData.await()
-                                            defferedGetMatchBaseData.cancel()
-                                            if (baseData != null) {
+                                        if (matchId.isNotEmpty()) {
+                                            GlobalScope.launch(Dispatchers.Main) {
+                                                val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
+                                                val baseData = defferedGetMatchBaseData.await()
+                                                defferedGetMatchBaseData.cancel()
+                                                if (baseData != null) {
 
 //                                                Log.d(TAG, "B showUpdatePlayerNameDialog(), baseData.playerIdA: ${baseData.playerIdA}, baseData.playerIdB: ${baseData.playerIdB}")
 
-                                                val refPlayerA = FirebaseDatabase.getInstance().getReference("userMatches")
-                                                refPlayerA.child(baseData.playerIdA!!).child(matchId).removeValue()
-                                                val refPlayerB = FirebaseDatabase.getInstance().getReference("userMatches")
-                                                refPlayerB.child(baseData.playerIdB!!).child(matchId).removeValue()
-                                                val refMatches = FirebaseDatabase.getInstance().getReference("matches/$matchId")
-                                                refMatches.removeValue()
+                                                    val refPlayerA = FirebaseDatabase.getInstance().getReference("userMatches")
+                                                    refPlayerA.child(baseData.playerIdA!!).child(matchId).removeValue()
+                                                    val refPlayerB = FirebaseDatabase.getInstance().getReference("userMatches")
+                                                    refPlayerB.child(baseData.playerIdB!!).child(matchId).removeValue()
+                                                    val refMatches = FirebaseDatabase.getInstance().getReference("matches/$matchId")
+                                                    refMatches.removeValue()
+                                                }
                                             }
                                         }
                                     }
@@ -6707,7 +6713,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
         dialogPlayOnline.dismiss()
 
-        when (prefs.getInt("playerQueryId", 1)) {
+        when (prefs.getInt("playerQueryId", 2)) {
             1 -> {
                 dialogPlayerQuery.playerOnline.setBackgroundColor(ContextCompat.getColor(this, R.color.colorDiceB))
                 dialogPlayerQuery.playerOftenActive.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
@@ -6784,7 +6790,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             dialogPlayerQuery.playerLeaderboard.text = lbInfo
 
             val lbList: ArrayList<UserList>
-            when (prefs.getInt("playerQueryId", 1)) {
+            when (prefs.getInt("playerQueryId", 2)) {
                 1 -> {
                     val defferedOnline = async { getPlayerQueryArray(true) }
                     lbList = defferedOnline.await()
@@ -7955,7 +7961,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
                             for (i in matchListA.indices) {
                                 val m = matchListA[i]
-                                if (m.selected) {
+                                if (m.selected && m.matchId.isNotEmpty()) {
                                     val refPlayer = FirebaseDatabase.getInstance().getReference("userMatches")
                                     refPlayer.child(playerIdA).child(m.matchId).removeValue()
                                     val refMatches = FirebaseDatabase.getInstance().getReference("matches/${m.matchId}")
@@ -7973,7 +7979,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
                             for (i in matchListB.indices) {
                                 val m = matchListB[i]
-                                if (m.selected) {
+                                if (m.selected && m.matchId.isNotEmpty()) {
                                     val refPlayer = FirebaseDatabase.getInstance().getReference("userMatches")
                                     refPlayer.child(playerIdB).child(m.matchId).removeValue()
                                     val refMatches = FirebaseDatabase.getInstance().getReference("matches/${m.matchId}")
