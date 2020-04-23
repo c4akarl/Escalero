@@ -6545,7 +6545,8 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             else
                 dialogPlayOnline.escaleroPoints.text = epPrefs
 
-            dialogPlayOnline.show()
+            if (!dialogPlayOnline.isShowing)
+                dialogPlayOnline.show()
 
         }
 
