@@ -49,13 +49,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.androidheads.vienna.engine.Engine
-import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.InterstitialAd
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.reward.RewardItem
-import com.google.android.gms.ads.reward.RewardedVideoAd
-import com.google.android.gms.ads.reward.RewardedVideoAdListener
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdCallback
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.auth.api.Auth
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -90,107 +87,18 @@ import kotlin.concurrent.schedule
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
-
-    override fun onRewardedVideoAdClosed() {
-
-//        Log.d(TAG, "onRewardedVideoAdClosed!, adsType: $adsType")
-
-        when (adsType) {
-            1 -> loadInterstitialAd()
-            2 -> loadRewardedVideoAd()
-        }
-
-    }
-    override fun onRewarded(reward: RewardItem?) {
-
-        if (reward != null) {
-
-//            Log.d(TAG, "onRewarded! type: ${reward.type}, amount: ${reward.amount}")
-
-            if (prefs.getBoolean("playOnline", false)) {
-                getEpFromAds()
-            }
-
-        }
-
-    }
-    override fun onRewardedVideoAdLeftApplication()     {
-        isAdsSelected = true
-        adsStartTime = System.currentTimeMillis()
-//        Log.d(TAG, "onRewardedVideoAdLeftApplication()")
-    }
-    override fun onRewardedVideoAdLoaded()              {
-//        Log.d(TAG, "onRewardedVideoAdLoaded()")
-    }
-    override fun onRewardedVideoAdOpened()              {
-//        Log.d(TAG, "onRewardedVideoAdOpened()")
-    }
-    override fun onRewardedVideoCompleted()             {
-//        Log.d(TAG, "onRewardedVideoCompleted()")
-    }
-    override fun onRewardedVideoStarted()               {
-        isAdsSelected = false
-//        Log.d(TAG, "onRewardedVideoStarted()")
-    }
-    override fun onRewardedVideoAdFailedToLoad(p0: Int) {
-//        Log.d(TAG, "onRewardedVideoAdFailedToLoad(), p0: $p0")
-    }
+class MainActivity : Activity(), View.OnTouchListener {
 
     private fun loadRewardedVideoAd() {
-
-//        Log.d(TAG, "loadRewardedVideoAd()")
-
-        if (BuildConfig.DEBUG)
-            mRewardedVideoAd.loadAd(resources.getString(R.string.adMobVideoDebugId), AdRequest.Builder().build())
-        else
-            mRewardedVideoAd.loadAd(resources.getString(R.string.adMobVideoId), AdRequest.Builder().build())
-    }
-
-    private fun loadInterstitialAd() {
-        mInterstitialAd = InterstitialAd(this)
-        val unitId =
-                if (BuildConfig.DEBUG)
-                    resources.getString(R.string.adMobInterDebugId)
-                else
-                    resources.getString(R.string.adMobInterId)
-
-        mInterstitialAd.adUnitId = unitId
-        mInterstitialAd.loadAd(AdRequest.Builder().build())
-        mInterstitialAd.adListener = object: AdListener() {
-            override fun onAdOpened() {
-                isAdsSelected = false
-                adsStartTime = 0L
-
-//                Log.d(TAG, "loadInterstitialAd(), onAdOpened()")
-
+        val adLoadCallback = object: RewardedAdLoadCallback() {
+            override fun onRewardedAdLoaded() {
+//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdLoaded")
             }
-            override fun onAdLeftApplication() {
-                isAdsSelected = true
-                adsStartTime = System.currentTimeMillis()
-
-//                Log.d(TAG, "loadInterstitialAd(), onAdLeftApplication()")
-
-            }
-            override fun onAdClosed() {
-
-//                Log.d(TAG, "loadInterstitialAd(), onAdClosed(), adsType: $adsType")
-
-                if (prefs.getBoolean("playOnline", false)) {
-                    if (!(isAdsSelected && adsStartTime != 0L && System.currentTimeMillis() - adsStartTime >= ONLINE_ADS_MIN_TIME))
-                        isAdsSelected = false
-
-//                    Log.d(TAG, "loadInterstitialAd(), adsStartTime: $adsStartTime, isAdsSelected: $isAdsSelected")
-
-                    getEpFromAds()
-                }
-                when (adsType) {
-                    1 -> mInterstitialAd.loadAd(AdRequest.Builder().build())
-                    2 -> loadRewardedVideoAd()
-                }
-
+            override fun onRewardedAdFailedToLoad(errorCode: Int) {
+//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdFailedToLoad, errorCode: $errorCode")
             }
         }
+        mRewardedAd.loadAd(AdRequest.Builder().build(), adLoadCallback)
     }
 
     fun getEpFromAds() {
@@ -531,8 +439,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     private var mSoundPool: SoundPool? = null
     private lateinit var soundsMap: HashMap<Int, Int>
 
-    private lateinit var mInterstitialAd: InterstitialAd
-    private lateinit var mRewardedVideoAd: RewardedVideoAd
+    private lateinit var mRewardedAd: RewardedAd
     private var isInitAds = false
 
     //ONLINE - variables
@@ -592,7 +499,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     private var matchCheckAll = false
 
     private lateinit var dialogPlayerQuery: Dialog
-//    private var isShowingPlayerQuery = false
     private lateinit var userListArray: ArrayList<UserList>
 
     private lateinit var dialogPlayOnline: Dialog
@@ -753,7 +659,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
             refOponent.removeValue()
         }
 
-        if (deleteMatch) {
+        if (deleteMatch && matchId != "") {
             val ref = FirebaseDatabase.getInstance().getReference("matches/$matchId")
             ref.removeValue()
                     .addOnSuccessListener {
@@ -768,149 +674,151 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     }
 
-    private suspend fun matchUpdateListener(matchId: String): String = suspendCoroutine { continuation ->
+    private suspend fun matchUpdateListener(matchId: String?): String = suspendCoroutine { continuation ->
 
 //        Log.i(TAG, "matchUpdateListener(), matchId: $matchId")
 
-        refMatch = FirebaseDatabase.getInstance().getReference("matches/$matchId")
-        refMatch!!.child("timestamp")
-        refMatchListener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                try {
+        if (!matchId.isNullOrEmpty()) {
+            refMatch = FirebaseDatabase.getInstance().getReference("matches/$matchId")
+            refMatch!!.child("timestamp")
+            refMatchListener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
 
-                    if (!prefs.getBoolean("playOnline", false)) {
-                        refMatch!!.removeEventListener(refMatchListener!!)
-                        return
-                    }
+                        if (!prefs.getBoolean("playOnline", false)) {
+                            refMatch!!.removeEventListener(refMatchListener!!)
+                            return
+                        }
 
-                    if (snapshot.exists()) {
+                        if (snapshot.exists()) {
 
-                        GlobalScope.launch(Dispatchers.Main) {
+                            GlobalScope.launch(Dispatchers.Main) {
 
 //                            Log.i(TAG, "matchUpdateListener(), onDataChange(), matchId: $matchId, mIsContinueMatch: $mIsContinueMatch")
 
-                            if (mIsContinueMatch) {
-                                mIsContinueMatch = false
-                                return@launch
-                            }
+                                if (mIsContinueMatch) {
+                                    mIsContinueMatch = false
+                                    return@launch
+                                }
 
-                            val defferedGetMatchTimestamp = async { getMatchTimestamp(matchId) }
-                            var timestamp = defferedGetMatchTimestamp.await().toLong()
-                            defferedGetMatchTimestamp.cancel()
+                                val defferedGetMatchTimestamp = async { getMatchTimestamp(matchId) }
+                                var timestamp = defferedGetMatchTimestamp.await().toLong()
+                                defferedGetMatchTimestamp.cancel()
 
-                            if (timestamp == 0L && mTimestampPre > 0L)
-                                timestamp = mTimestampPre + 100L
+                                if (timestamp == 0L && mTimestampPre > 0L)
+                                    timestamp = mTimestampPre + 100L
 
-                            if (mTimestampPre == 0L && isDoingTurn)
-                                mTimestampPre = timestamp
+                                if (mTimestampPre == 0L && isDoingTurn)
+                                    mTimestampPre = timestamp
 
-                            if (timestamp > mTimestampPre) {
-                                mTimestampPre = timestamp
+                                if (timestamp > mTimestampPre) {
+                                    mTimestampPre = timestamp
 
-                                val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                                val checkBaseData = defferedGetMatchBaseData.await()
-                                defferedGetMatchBaseData.cancel()
+                                    val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
+                                    val checkBaseData = defferedGetMatchBaseData.await()
+                                    defferedGetMatchBaseData.cancel()
 
-                                val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-                                val checkUpdateData = defferedGetMatchUpdateData.await()
-                                defferedGetMatchUpdateData.cancel()
+                                    val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+                                    val checkUpdateData = defferedGetMatchUpdateData.await()
+                                    defferedGetMatchUpdateData.cancel()
 
-                                if (checkUpdateData != null && checkBaseData != null) {
+                                    if (checkUpdateData != null && checkBaseData != null) {
 
 //                                    Log.i(TAG, "matchUpdateListener(), onlineAction: ${checkUpdateData.onlineAction}, myId: $mPlayerId, turnId: ${checkUpdateData.turnPlayerId}")
 
-                                    if (!mFinishApp) {
-                                        if (checkUpdateData.onlineAction!!.startsWith(ONLINE_START)) {
-                                            updateUserStatus(playerId = mPlayerId, playing = true, singleGame = ed.isSingleGame)
+                                        if (!mFinishApp) {
+                                            if (checkUpdateData.onlineAction!!.startsWith(ONLINE_START)) {
+                                                updateUserStatus(playerId = mPlayerId, playing = true, singleGame = ed.isSingleGame)
+                                            }
+                                            if (checkUpdateData.onlineAction!!.endsWith(PAUSED)) {
+                                                updateUserStatus(playerId = mPlayerId, playing = false, singleGame = ed.isSingleGame)
+                                            }
                                         }
-                                        if (checkUpdateData.onlineAction!!.endsWith(PAUSED)) {
-                                            updateUserStatus(playerId = mPlayerId, playing = false, singleGame = ed.isSingleGame)
+
+                                        if (checkUpdateData.onlineAction == ONLINE_GAME_OVER) {
+                                            handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
                                         }
-                                    }
 
-                                    if (checkUpdateData.onlineAction == ONLINE_GAME_OVER) {
-                                        handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
-                                    }
+                                        // MY_TURN
+                                        if (checkUpdateData.turnPlayerId == mPlayerId) {
 
-                                    // MY_TURN
-                                    if (checkUpdateData.turnPlayerId == mPlayerId) {
-
-                                        isDoingTurn = true
+                                            isDoingTurn = true
 
 //                                        Log.i(TAG, "matchUpdateListener(), MY_TURN, onlineAction: ${checkUpdateData.onlineAction}")
 
 
-                                        if (mPlayerId != null) {
+                                            if (mPlayerId != null) {
 
 //                                            Log.i(TAG, "matchUpdateListener(), userMatches")
 
-                                            val players = "${checkBaseData.nameA!!} - ${checkBaseData.nameB!!}"
-                                            var variant = getString(R.string.typeSingle)
-                                            if (!checkBaseData.singleGame!!)
-                                                variant = getString(R.string.typeDouble)
+                                                val players = "${checkBaseData.nameA!!} - ${checkBaseData.nameB!!}"
+                                                var variant = getString(R.string.typeSingle)
+                                                if (!checkBaseData.singleGame!!)
+                                                    variant = getString(R.string.typeDouble)
 
-                                            val defferedUpdateMatchPlayer = async { addMatchToUserMatches(mPlayerId!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
-                                            defferedUpdateMatchPlayer.await()
-                                            defferedUpdateMatchPlayer.cancel()
+                                                val defferedUpdateMatchPlayer = async { addMatchToUserMatches(mPlayerId!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
+                                                defferedUpdateMatchPlayer.await()
+                                                defferedUpdateMatchPlayer.cancel()
 
-                                            var oponent = checkBaseData.playerIdB
-                                            if (mPlayerId == checkBaseData.playerIdB)
-                                                oponent = checkBaseData.playerIdA
+                                                var oponent = checkBaseData.playerIdB
+                                                if (mPlayerId == checkBaseData.playerIdB)
+                                                    oponent = checkBaseData.playerIdA
 
-                                            val defferedUserLanguage = async { getUserLanguage(oponent!!) }
-                                            val userLanguage = defferedUserLanguage.await()
-                                            defferedUserLanguage.cancel()
-                                            variant = getStringByLocal(this@MainActivity, R.string.typeSingle, null, null, userLanguage)
-                                            if (!checkBaseData.singleGame!!)
-                                                variant = getStringByLocal(this@MainActivity, R.string.typeDouble, null, null, userLanguage)
+                                                val defferedUserLanguage = async { getUserLanguage(oponent!!) }
+                                                val userLanguage = defferedUserLanguage.await()
+                                                defferedUserLanguage.cancel()
+                                                variant = getStringByLocal(this@MainActivity, R.string.typeSingle, null, null, userLanguage)
+                                                if (!checkBaseData.singleGame!!)
+                                                    variant = getStringByLocal(this@MainActivity, R.string.typeDouble, null, null, userLanguage)
 
 //                                            Log.i(TAG, "matchUpdateListener(), userMatches, playerIdA: ${checkMatchBaseData!!.playerIdA}, playerIdB: ${checkMatchBaseData!!.playerIdB}")
 //                                            Log.i(TAG, "matchUpdateListener(), userMatches, mPlayerId: $mPlayerId, oponent: $oponent")
 
-                                            val defferedUpdateMatchOponent = async { addMatchToUserMatches(oponent!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
-                                            defferedUpdateMatchOponent.await()
-                                            defferedUpdateMatchOponent.cancel()
+                                                val defferedUpdateMatchOponent = async { addMatchToUserMatches(oponent!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
+                                                defferedUpdateMatchOponent.await()
+                                                defferedUpdateMatchOponent.cancel()
 
 //                                            Log.i(TAG, "matchUpdateListener(), addMatchToUserMatches(), mPlayerId: $mPlayerId, oponent: $oponent")
 
+                                            }
+
+                                            matchTurn(checkUpdateData)
+
                                         }
+                                        // THEIR_TURN
+                                        else {
 
-                                        matchTurn(checkUpdateData)
+                                            isDoingTurn = false
+                                            matchUpdate(checkUpdateData)
 
+                                        }
                                     }
-                                    // THEIR_TURN
-                                    else {
-
-                                        isDoingTurn = false
-                                        matchUpdate(checkUpdateData)
-
+                                } else {
+                                    if (timestamp == 0L) {
+                                        matchDataToDb(false, getPausedStatus())
+                                        showInfoDialog(getString(R.string.matchBreak), getString(R.string.dataUpdateProblem), getString(R.string.ok))
+                                        diceBoard.mOnlinePlayers = ""
+                                        diceBoard.updateBoard(diceRoll, diceHold, diceDouble1, false, 1, initRollValues)
                                     }
-                                }
-                            }
-                            else {
-                                if (timestamp == 0L) {
-                                    matchDataToDb(false, getPausedStatus())
-                                    showInfoDialog(getString(R.string.matchBreak), getString(R.string.dataUpdateProblem), getString(R.string.ok))
-                                    diceBoard.mOnlinePlayers = ""
-                                    diceBoard.updateBoard(diceRoll, diceHold, diceDouble1, false, 1, initRollValues)
                                 }
                             }
                         }
-                    }
 
+                    } catch (e: IllegalStateException) {
+                    }
                 }
-                catch (e : IllegalStateException) { }
-            }
-            override fun onCancelled(error: DatabaseError) {
+
+                override fun onCancelled(error: DatabaseError) {
 
 //                Log.i(TAG, "matchUpdateListener(), onCancelled")
 
-                continuation.resume("")
-                refMatch!!.removeEventListener(this)
+                    continuation.resume("")
+                    refMatch!!.removeEventListener(this)
+                }
             }
-        }
 
-        refMatch!!.addValueEventListener(refMatchListener!!)
+            refMatch!!.addValueEventListener(refMatchListener!!)
+        }
 
     }
 
@@ -1482,10 +1390,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
         if (!isInitAds) {
             isInitAds = true
-            MobileAds.initialize(applicationContext, resources.getString(R.string.adMobAppId))
-            loadInterstitialAd()
-            mRewardedVideoAd = MobileAds.getRewardedVideoAdInstance(this)
-            mRewardedVideoAd.rewardedVideoAdListener = this
+            mRewardedAd = if (BuildConfig.DEBUG)
+                RewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
+            else
+                RewardedAd(this, resources.getString(R.string.adMobVideoId))
             loadRewardedVideoAd()
         }
 
@@ -2806,10 +2714,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 if (engine != null)
                     performEngineCommands("logging " + prefs.getBoolean("logging", false))
                 if (prefs.getBoolean("advertising", true)) {
-                    when (adsType) {
-                        1 -> loadInterstitialAd()
-                        2 -> loadRewardedVideoAd()
-                    }
+                    loadRewardedVideoAd()
                     if (!prevAdvertising) {
                         val ed = prefs.edit()
                         ed.putLong("adsDelay", 0L)
@@ -4414,8 +4319,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
         flipModus = runPrefs.getInt("flipModus", 0)
         diceModus = runPrefs.getInt("diceModus", 0)
         diceModusPrev = runPrefs.getInt("diceModusPrev", 0)
-        adsType = runPrefs.getInt("adsType", 1)
-
 
 //        Log.i(TAG, "getRunPrefs(), diceModus: " + diceModus + ", diceModusPrev: " + diceModusPrev)
 
@@ -5200,41 +5103,56 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     }
 
     private fun showAds(actionID: String): Boolean {
+
+//        Log.d(TAG, "showAds()")
+
         var isAdsShowing = false
         if (prefs.getBoolean("advertising", true)) {
             val timeStamp = System.currentTimeMillis()
             var setTimeStamp = false
             if (timeStamp - prefs.getLong("adsDelay", 0L) >= ADS_DELAY) {
+
+//                Log.d(TAG, "showAds(), timeStamp: " + timeStamp + ", adsDelay" + prefs.getLong("adsDelay", 0L) + ", ADS_DELAY: " + ADS_DELAY)
+
                 isAdsShowing = true
-                when (adsType) {
-                    1 -> {
-                        if (mInterstitialAd.isLoaded) {
-                            mInterstitialAd.show()
-                            setAnalyticsLogEvent(actionID)
-                            setTimeStamp = true
-                            adsType = 2
-                        } else {
-                            loadInterstitialAd()
+                if (mRewardedAd.isLoaded) {
+                    val activityContext: Activity = this
+                    val adCallback = object: RewardedAdCallback() {
+                        override fun onRewardedAdOpened() {
+                            isAdsSelected = true
+                            adsStartTime = System.currentTimeMillis()
                         }
-                    }
-                    else -> {
-                        if (mRewardedVideoAd.isLoaded) {
-                            mRewardedVideoAd.show()
-                            setAnalyticsLogEvent(actionID)
-                            setTimeStamp = true
-                            adsType = 1
-                        } else {
+                        override fun onRewardedAdClosed() {
+                            if (prefs.getBoolean("playOnline", false)) {
+                                if (!(isAdsSelected && adsStartTime != 0L && System.currentTimeMillis() - adsStartTime >= ONLINE_ADS_MIN_TIME))
+                                    isAdsSelected = false
+                                getEpFromAds()
+                            }
+
                             loadRewardedVideoAd()
+
+                        }
+//                                override fun onUserEarnedReward(@NonNull reward: RewardItem) {
+                        override fun onUserEarnedReward(p0: com.google.android.gms.ads.rewarded.RewardItem) {
+                            if (prefs.getBoolean("playOnline", false)) {
+                                getEpFromAds()
+                            }
+                        }
+                        override fun onRewardedAdFailedToShow(errorCode: Int) {
+                            // Ad failed to display.
                         }
                     }
+                    mRewardedAd.show(activityContext, adCallback)
+                    setAnalyticsLogEvent(actionID)
+                    setTimeStamp = true
+                } else {
+                    loadRewardedVideoAd()
                 }
+
                 if (setTimeStamp) {
                     val ed = prefs.edit()
                     ed.putLong("adsDelay", timeStamp)
                     ed.apply()
-                    val edi = runPrefs.edit()
-                    edi.putInt("adsType", adsType)
-                    edi.apply()
                 }
             }
         }
@@ -5946,9 +5864,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                 dialogTwoBtn.dismiss()
             }
             else {
-                if (adsType != 0) {
-                    showAskForAdvertisingDialog()
-                }
+                showAskForAdvertisingDialog()
             }
         }
         dialogTwoBtn.action1.visibility = ImageView.VISIBLE
@@ -6644,7 +6560,7 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                     val um = it.getValue(UserMatch::class.java)
 
                                     if (um != null) {
-                                        val matchId = um.matchId!!
+                                        val matchId = um.matchId ?: ""
                                         if (matchId.isNotEmpty()) {
                                             GlobalScope.launch(Dispatchers.Main) {
                                                 val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
@@ -6658,8 +6574,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                                     refPlayerA.child(baseData.playerIdA!!).child(matchId).removeValue()
                                                     val refPlayerB = FirebaseDatabase.getInstance().getReference("userMatches")
                                                     refPlayerB.child(baseData.playerIdB!!).child(matchId).removeValue()
-                                                    val refMatches = FirebaseDatabase.getInstance().getReference("matches/$matchId")
-                                                    refMatches.removeValue()
+                                                    if (matchId != "") {
+                                                        val refMatches = FirebaseDatabase.getInstance().getReference("matches/$matchId")
+                                                        refMatches.removeValue()
+                                                    }
                                                 }
                                             }
                                         }
@@ -7965,8 +7883,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                 if (m.selected && m.matchId.isNotEmpty()) {
                                     val refPlayer = FirebaseDatabase.getInstance().getReference("userMatches")
                                     refPlayer.child(playerIdA).child(m.matchId).removeValue()
-                                    val refMatches = FirebaseDatabase.getInstance().getReference("matches/${m.matchId}")
-                                    refMatches.removeValue()
+                                    if (m.matchId != "") {
+                                        val refMatches = FirebaseDatabase.getInstance().getReference("matches/${m.matchId}")
+                                        refMatches.removeValue()
+                                    }
                                 }
                             }
 
@@ -7983,8 +7903,10 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
                                 if (m.selected && m.matchId.isNotEmpty()) {
                                     val refPlayer = FirebaseDatabase.getInstance().getReference("userMatches")
                                     refPlayer.child(playerIdB).child(m.matchId).removeValue()
-                                    val refMatches = FirebaseDatabase.getInstance().getReference("matches/${m.matchId}")
-                                    refMatches.removeValue()
+                                    if (m.matchId != "") {
+                                        val refMatches = FirebaseDatabase.getInstance().getReference("matches/${m.matchId}")
+                                        refMatches.removeValue()
+                                    }
                                 }
                             }
 
@@ -8328,7 +8250,11 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
 
     }
 
-    private fun startRemoveMatch(deleteMatch: Boolean, matchId: String, playerIdA: String?, playerIdB: String?) {
+    private fun startRemoveMatch(deleteMatch: Boolean, matchId: String?, playerIdA: String?, playerIdB: String?) {
+
+        if (matchId.isNullOrEmpty())
+            return
+
         GlobalScope.launch(Dispatchers.Main) {
             val defferedCancelMatch = async { cancelMatch(deleteMatch, matchId, playerIdA, playerIdB) }
             val isRemoved = defferedCancelMatch.await()
@@ -8920,7 +8846,6 @@ class MainActivity : Activity(), View.OnTouchListener, RewardedVideoAdListener {
     }
 
     // special controls (TEST)
-    private var adsType = 1                     // showEscaleroPointsDialog(): 0 = no ads, 1 = interstitialAd, 2 = rewardedVideoAd
     private var showOnlineTime = 0             // 0 = non, 1 = show time, 2 = [= > >> >>>]
 
 }
