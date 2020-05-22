@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+@file:Suppress("DEPRECATION")
+
 package com.androidheads.vienna.escalero
 
 import android.Manifest
@@ -92,104 +94,17 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun loadRewardedVideoAd() {
         val adLoadCallback = object: RewardedAdLoadCallback() {
             override fun onRewardedAdLoaded() {
+
 //                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdLoaded")
+
             }
             override fun onRewardedAdFailedToLoad(errorCode: Int) {
+
 //                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdFailedToLoad, errorCode: $errorCode")
+
             }
         }
         mRewardedAd.loadAd(AdRequest.Builder().build(), adLoadCallback)
-    }
-
-    fun getEpFromAds() {
-
-//        Log.d(TAG, "getEpFromAds(), isAdsSelected: $isAdsSelected")
-
-        val dRoll = IntArray(5)
-
-        var points = 0L
-        var pointsTxt = ""
-        for (i in dRoll.indices) {
-            dRoll[i] = rand.nextInt(6)
-        }
-
-        for (i in dRoll.indices) {
-            points += dRoll[i] +1
-            pointsTxt += "${dRoll[i] +1} "
-        }
-        pointsTxt += " =  $points"
-
-        val diceValues = IntArray(6)
-        for (i in diceValues.indices) {
-            diceValues[i] = 0
-        }
-        for (i in dRoll.indices) {
-            diceValues[dRoll[i]] = diceValues[dRoll[i]] + 1
-        }
-
-        if (isAdsSelected) {
-            when (ed.getDiceResult(false, diceValues)) {
-                resources.getString(R.string.diceStraight) -> {
-                    points = 25
-                }
-                resources.getString(R.string.diceFullHouse) -> {
-                    points = 35
-                }
-                resources.getString(R.string.dicePoker) -> {
-                    points = 45
-                }
-                resources.getString(R.string.diceGrande) -> {
-                    points = 80
-                }
-            }
-            if (points < ONLINE_LEADERBORD_BONUS_2)
-                points = ONLINE_LEADERBORD_BONUS_2
-        }
-        else {
-            pointsTxt = ""
-            points = ONLINE_LEADERBORD_BONUS_MIN
-        }
-
-        GlobalScope.launch(Dispatchers.Main) {
-            if (!mPlayerId.isNullOrBlank()) {
-                val defferedLeaderboardScore = async { getLeaderboardScore(mPlayerId!!) }
-                val currentScore = defferedLeaderboardScore.await()
-                defferedLeaderboardScore.cancel()
-
-//                Log.d(TAG, "getEpFromAds(), leaderboardScore: $currentScore")
-
-                if (currentScore in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                    mPlayerEp = currentScore + points
-                    val ld = Leaderboard()
-                    ld.name = mPlayerName
-                    ld.score = mPlayerEp
-                    ld.uid = mPlayerId
-
-//                    Log.d(TAG, "getEpFromAds(), currentScore: $currentScore, mPlayerEp: $mPlayerEp")
-
-                    val defferedUpdateLeaderboardData = async { updateLeaderboardData(mPlayerId!!, ld) }
-                    defferedUpdateLeaderboardData.await()
-                    defferedUpdateLeaderboardData.cancel()
-
-                    runOnUiThread {
-                        dialogTwoBtn.dismiss()
-
-                        setEP()
-
-                        showRewardBonus(
-                                dRoll,
-                                pointsTxt,
-                                "${getString(R.string.bonus)} $points EP",
-                                "${getString(R.string.oldEp)} $currentScore EP",
-                                "${getString(R.string.newEp)} $mPlayerEp EP")
-
-                    }
-
-                }
-            }
-
-        }
-
     }
 
     private val position: String
@@ -374,7 +289,6 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var isInitBoard = false
     private var isInitRound = true
     private var isInitDelay = false
-    private var prevAdvertising = false
     private lateinit var preferencesIntent: Intent
     private lateinit var newGameIntent: Intent
     private lateinit var fileManagerIntent: Intent
@@ -441,6 +355,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private lateinit var mRewardedAd: RewardedAd
     private var isInitAds = false
+    private var adsCount = 1
 
     //ONLINE - variables
     private var mGoogleSignInClient: GoogleSignInClient? = null
@@ -462,8 +377,6 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var isOnlineEntry = false
     private var isRematchAccepted = false
     private var isUpdateError = false
-    private var isAdsSelected = false
-    private var adsStartTime = 0L
     private var mPlayerId: String? = null
     private var mPlayerABC: String? = null
     private var mPlayerName: String? = null
@@ -475,8 +388,6 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var mOponentName: String? = null
     private var mOponentEp = -1L      // Escalero Points
     private var mOponentAppVersionCode: Long? = null
-
-    private var mLeaderboardH = 0L   // leaderboard, wait for bonus (houres)
 
     private var mMatchId: String? = null
     private var mMatchBaseData: MatchBaseData? = null
@@ -531,18 +442,22 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                        Log.d(TAG, "isLatestVersionCode(): info.versionCode: ${info.versionCode}, currentVeriosnCode: $currentVeriosnCode")
 
-                        try { continuation.resume(false) }
-                        catch (e : IllegalStateException) { }
-                    }
-                    else {
+                        try {
+                            continuation.resume(false)
+                        } catch (e: IllegalStateException) {
+                        }
+                    } else {
 
 //                        Log.d(TAG, "isLatestVersionCode() >= $currentVeriosnCode")
 
-                        try { continuation.resume(true) }
-                        catch (e : IllegalStateException) { }
+                        try {
+                            continuation.resume(true)
+                        } catch (e: IllegalStateException) {
+                        }
                     }
                     ref.removeEventListener(this)
                 }
+
                 override fun onCancelled(error: DatabaseError) {
 
 //                    Log.d(TAG, "isLatestVersionCode(): error: $error")
@@ -598,12 +513,15 @@ class MainActivity : Activity(), View.OnTouchListener {
     private suspend fun getMatchTimestamp(matchId: String): String = suspendCoroutine { continuation ->
         val ref = FirebaseDatabase.getInstance().getReference("matches")
         ref.child(matchId).child("timestamp")
-            .addListenerForSingleValueEvent(object: ValueEventListener  {
+            .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    try { continuation.resume(dataSnapshot.value.toString()) }
-                    catch (e : IllegalStateException) { }
+                    try {
+                        continuation.resume(dataSnapshot.value.toString())
+                    } catch (e: IllegalStateException) {
+                    }
                     ref.removeEventListener(this)
                 }
+
                 override fun onCancelled(p0: DatabaseError) {
                     continuation.resume("0")
                     ref.removeEventListener(this)
@@ -614,12 +532,15 @@ class MainActivity : Activity(), View.OnTouchListener {
     private suspend fun getMatchBaseData(matchId: String): MatchBaseData? = suspendCoroutine { continuation ->
         val ref = FirebaseDatabase.getInstance().getReference("matches")
         ref.child(matchId).child("baseData")
-            .addListenerForSingleValueEvent(object: ValueEventListener  {
+            .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    try { continuation.resume(dataSnapshot.getValue(MatchBaseData::class.java)) }
-                    catch (e : IllegalStateException) { }
+                    try {
+                        continuation.resume(dataSnapshot.getValue(MatchBaseData::class.java))
+                    } catch (e: IllegalStateException) {
+                    }
                     ref.removeEventListener(this)
                 }
+
                 override fun onCancelled(p0: DatabaseError) {
                     continuation.resume(null)
                     ref.removeEventListener(this)
@@ -630,12 +551,15 @@ class MainActivity : Activity(), View.OnTouchListener {
     private suspend fun getMatchUpdateData(matchId: String): MatchUpdateData? = suspendCoroutine { continuation ->
         val ref = FirebaseDatabase.getInstance().getReference("matches")
         ref.child(matchId).child("updateData")
-            .addListenerForSingleValueEvent(object: ValueEventListener  {
+            .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    try { continuation.resume(dataSnapshot.getValue(MatchUpdateData::class.java)) }
-                    catch (e : IllegalStateException) { }
+                    try {
+                        continuation.resume(dataSnapshot.getValue(MatchUpdateData::class.java))
+                    } catch (e: IllegalStateException) {
+                    }
                     ref.removeEventListener(this)
                 }
+
                 override fun onCancelled(p0: DatabaseError) {
                     continuation.resume(null)
                     ref.removeEventListener(this)
@@ -849,12 +773,10 @@ class MainActivity : Activity(), View.OnTouchListener {
                         }
                     }
                 }
-                catch (e : IllegalStateException) { continuation.resume("") }
+                catch (e: IllegalStateException) { continuation.resume("") }
             }
             override fun onCancelled(error: DatabaseError) {
-                //karl
-//                continuation.resume("")
-//                refQickMatch.removeEventListener(this)
+
             }
         }
 
@@ -866,10 +788,13 @@ class MainActivity : Activity(), View.OnTouchListener {
         val ref = FirebaseDatabase.getInstance().getReference("quickMatch")
         ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                try { continuation.resume(snapshot.value.toString()) }
-                catch (e : IllegalStateException) { }
+                try {
+                    continuation.resume(snapshot.value.toString())
+                } catch (e: IllegalStateException) {
+                }
                 ref.removeEventListener(this)
             }
+
             override fun onCancelled(error: DatabaseError) {
                 continuation.resume("")
                 ref.removeEventListener(this)
@@ -920,11 +845,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                 val lb = dataSnapshot.getValue(Leaderboard::class.java)
                 if (dataSnapshot.exists()) {
                     try { continuation.resume(lb!!.score ?: -4) }
-                    catch (e : IllegalStateException) { }
+                    catch (e: IllegalStateException) { }
                 }
                 else {
                     try { continuation.resume(-5) }
-                    catch (e : IllegalStateException) { }
+                    catch (e: IllegalStateException) { }
                 }
                 ref.removeEventListener(this)
             }
@@ -965,8 +890,10 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 
                 }
-                try { continuation.resume(userListArray) }
-                catch (e : IllegalStateException) { }
+                try {
+                    continuation.resume(userListArray)
+                } catch (e: IllegalStateException) {
+                }
                 query.removeEventListener(this)
             }
 
@@ -1012,6 +939,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
     }
 
+    @Suppress("DEPRECATION")
     private suspend fun updateUserData(userId: String, userData: User): Boolean = suspendCoroutine { continuation ->
         FirebaseInstanceId.getInstance().instanceId
                 .addOnCompleteListener(this) { task ->
@@ -1034,18 +962,21 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                     }
                 }
-
     }
 
     private suspend fun getUserData(userId: String): User? = suspendCoroutine { continuation ->
         val ref = FirebaseDatabase.getInstance().getReference("users")
         ref.child(userId)
-                .addListenerForSingleValueEvent(object: ValueEventListener  {
+                .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(dataSnapshot: DataSnapshot) {
-                        try { continuation.resume(dataSnapshot.getValue(User::class.java)) }
-                        catch (e : IllegalStateException) { continuation.resume(null) }
+                        try {
+                            continuation.resume(dataSnapshot.getValue(User::class.java))
+                        } catch (e: IllegalStateException) {
+                            continuation.resume(null)
+                        }
                         ref.removeEventListener(this)
                     }
+
                     override fun onCancelled(p0: DatabaseError) {
                         continuation.resume(null)
                         ref.removeEventListener(this)
@@ -1105,10 +1036,10 @@ class MainActivity : Activity(), View.OnTouchListener {
                                     ml.status = resources.getString(R.string.theirTurn, strResult[0])
                             }
                             ml.variant =
-                                if (um.variant.isNullOrEmpty())
-                                    getString(R.string.typeSingle)
-                                else
-                                    um.variant!!
+                                    if (um.variant.isNullOrEmpty())
+                                        getString(R.string.typeSingle)
+                                    else
+                                        um.variant!!
 
                             if (um.timestamp != null)
                                 ml.time = getUpdateTime(um.timestamp!!.toLong(), serverTimestamp)
@@ -1124,10 +1055,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
                 try {
                     continuation.resume(matchList)
+                } catch (e: IllegalStateException) {
                 }
-                catch (e: IllegalStateException) { }
 
             }
+
             override fun onCancelled(databaseError: DatabaseError) {
                 continuation.resume(matchList)
                 ref.removeEventListener(this)
@@ -1139,13 +1071,16 @@ class MainActivity : Activity(), View.OnTouchListener {
     private suspend fun getTimestampFromServer(): String = suspendCoroutine { continuation ->
         val ref = FirebaseDatabase.getInstance().getReference("/timestamp")
         ref.setValue(ServerValue.TIMESTAMP)
-        ref.addListenerForSingleValueEvent(object:ValueEventListener {
+        ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                try { continuation.resume(snapshot.value.toString()) }
-                catch (e : IllegalStateException) { }
+                try {
+                    continuation.resume(snapshot.value.toString())
+                } catch (e: IllegalStateException) {
+                }
                 ref.removeEventListener(this)
             }
-            override fun onCancelled(error:DatabaseError) {
+
+            override fun onCancelled(error: DatabaseError) {
 
 //Log.i(TAG, "getTimestampFromServer(), error.code: ${error.code}, mTimestampPre: $mTimestampPre")
 
@@ -1156,8 +1091,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                         else
                             continuation.resume("0")
                     }
+                } catch (e: IllegalStateException) {
                 }
-                catch (e : IllegalStateException) { }
 
             }
         })
@@ -1168,17 +1103,19 @@ class MainActivity : Activity(), View.OnTouchListener {
         val query = ref
                 .orderByChild("name")
                 .equalTo(userName)
-        query.addListenerForSingleValueEvent(object: ValueEventListener {
+        query.addListenerForSingleValueEvent(object : ValueEventListener {
 
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 if (dataSnapshot.children.count() > 0) {
                     dataSnapshot.children.forEach {
-                        try { continuation.resume(it.key.toString()) }
-                        catch (e: IllegalStateException) { continuation.resume("") }
+                        try {
+                            continuation.resume(it.key.toString())
+                        } catch (e: IllegalStateException) {
+                            continuation.resume("")
+                        }
                         query.removeEventListener(this)
                     }
-                }
-                else
+                } else
                     continuation.resume("")
             }
 
@@ -1196,7 +1133,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 val user = dataSnapshot.getValue(User::class.java)
                 try { continuation.resume(user!!.language ?: "") }
-                catch (e : IllegalStateException) { }
+                catch (e: IllegalStateException) { }
                 ref.removeEventListener(this)
             }
             override fun onCancelled(databaseError: DatabaseError) {
@@ -1223,60 +1160,63 @@ class MainActivity : Activity(), View.OnTouchListener {
                 .orderByChild("timestamp")
                 .limitToLast(100)
             query.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
 
 //                Log.i(TAG, "getPlayerQueryArray(), isOnline: $isOnline, dataSnapshot.count: ${dataSnapshot.children.count()}")
 
-                dataSnapshot.children.reversed().forEach {
-                    val userData = it.getValue(User::class.java)!!
-                    val timestampUser = userData.timestamp ?: 0L
-                    val timeInMinutes = (timestamp - timestampUser) / 60000
-                    val timeInHours = (timestamp - timestampUser) / 3600000
-                    val timeInDays = (timestamp - timestampUser) / 86400000
+                    dataSnapshot.children.reversed().forEach {
+                        val userData = it.getValue(User::class.java)!!
+                        val timestampUser = userData.timestamp ?: 0L
+                        val timeInMinutes = (timestamp - timestampUser) / 60000
+                        val timeInHours = (timestamp - timestampUser) / 3600000
+                        val timeInDays = (timestamp - timestampUser) / 86400000
 
 //                    Log.i(TAG, "getPlayerQueryArray(), timestampUser: $timestampUser, ${userData.online}, ${userData.info}, ${timeInHours}h")
 
-                    if (cnt < 50) {
-                        val lb = UserList()
-                        lb.playerName = userData.name ?: ""
-                        lb.playerId = userData.uid ?: ""
-                        lb.info = ""    // showOnlineTime == 0
+                        if (cnt < 50) {
+                            val lb = UserList()
+                            lb.playerName = userData.name ?: ""
+                            lb.playerId = userData.uid ?: ""
+                            lb.info = ""    // showOnlineTime == 0
 
-                        lb.score = -99      // set to "" in UserListAdapter
+                            lb.score = -99      // set to "" in UserListAdapter
 
-                        lb.iconImageUri = userData.iconImageUri ?: ""
-                        if (!isOnline && timeInHours <= 240) {
-                            if (showOnlineTime == 1) {
-                                if (timeInHours == 0L)
-                                    lb.info = "${timeInMinutes}m"
-                                else {
-                                    if (timeInHours < 96)
-                                        lb.info = "${timeInHours}h"
-                                    else
-                                        lb.info = "${timeInDays}d"
+                            lb.iconImageUri = userData.iconImageUri ?: ""
+                            if (!isOnline) {
+                                if (showOnlineTime == 1) {
+                                    if (timeInHours == 0L)
+                                        lb.info = "${timeInMinutes}m"
+                                    else {
+                                        if (timeInHours < 96)
+                                            lb.info = "${timeInHours}h"
+                                        else
+                                            lb.info = "${timeInDays}d"
+                                    }
+                                }
+                                userListArray.add(lb)
+                            } else {
+                                if (userData.online == true && timeInHours == 0L) {
+                                    if (showOnlineTime == 1)
+                                        lb.info = "${timeInMinutes}m"
+                                    userListArray.add(lb)
                                 }
                             }
-                            userListArray.add(lb)
-                        } else {
-                            if (userData.online == true && timeInHours == 0L) {
-                                if (showOnlineTime == 1)
-                                    lb.info = "${timeInMinutes}m"
-                                userListArray.add(lb)
-                            }
+                            cnt++
                         }
-                        cnt++
-                    }
 
+                    }
+                    try {
+                        continuation.resume(userListArray)
+                    } catch (e: IllegalStateException) {
+                    }
+                    query.removeEventListener(this)
                 }
-                try { continuation.resume(userListArray) }
-                catch (e : IllegalStateException) { }
-                query.removeEventListener(this)
-            }
-            override fun onCancelled(databaseError: DatabaseError) {
-                continuation.resume(userListArray)
-                query.removeEventListener(this)
-            }
-        })
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    continuation.resume(userListArray)
+                    query.removeEventListener(this)
+                }
+            })
 
     }
 
@@ -1390,11 +1330,18 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         if (!isInitAds) {
             isInitAds = true
+
+//            mRewardedAd = RewardedAd(this, resources.getString(R.string.adMobVideoId))
+
             mRewardedAd = if (BuildConfig.DEBUG)
                 RewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
             else
                 RewardedAd(this, resources.getString(R.string.adMobVideoId))
-            loadRewardedVideoAd()
+
+            //karl
+            if (adsCount <= 0)
+                loadRewardedVideoAd()
+
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1527,9 +1474,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                     }
                     else {
                         when (actionId) {
-                            "", "1"     -> showInvitationFromNotificatioDialog(intent)
-                            "2"         -> startOnlineMatch(matchId)
-                            "3", "4"    -> showContinueMatchDialog(matchId, actionId)
+                            "", "1" -> showInvitationFromNotificatioDialog(intent)
+                            "2" -> startOnlineMatch(matchId)
+                            "3", "4" -> showContinueMatchDialog(matchId, actionId)
                             "8", "9" -> {
                                 if (mMatchId != null) {
                                     if (mMatchId == matchId) {
@@ -1537,8 +1484,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                                         initOnline()
                                         setNoActiveMatch()
                                         when (actionId) {
-                                            "8"     -> showInfoDialog(getString(R.string.info), getString(R.string.gameOver), getString(R.string.ok))
-                                            "9"     -> showInfoDialog(getString(R.string.info), getString(R.string.matchDeletedByPlayer, fromUsername), getString(R.string.ok))
+                                            "8" -> showInfoDialog(getString(R.string.info), getString(R.string.gameOver), getString(R.string.ok))
+                                            "9" -> showInfoDialog(getString(R.string.info), getString(R.string.matchDeletedByPlayer, fromUsername), getString(R.string.ok))
                                         }
                                     }
                                 }
@@ -1637,10 +1584,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     override fun onBackPressed() {
         mFinishApp = true
-        if (prefs.getBoolean("mainDialog", true))
-            showMainDialog()
-        else
-            finishApp(true)
+        finishApp(true)
     }
 
     override fun onDestroy() {
@@ -1900,15 +1844,14 @@ class MainActivity : Activity(), View.OnTouchListener {
                     Toast.makeText(applicationContext, getString(R.string.notYourTurn), Toast.LENGTH_SHORT).show()
                     return
                 }
-                    if (isDouble1 and (diceModus != 5)) {
+                if (isDouble1 and (diceModus != 5)) {
                     isDouble1 = false
                     setDiceDouble1()
                     diceModus = 1
                     setDiceValues(true)
                     setBtnPlayer(ed.playerToMove)
                     diceView(diceRoll, diceHold)
-                }
-                else {
+                } else {
                     if (!isDouble1 and (diceModusPrev <= 3)) {
                         isDouble1 = true
                         getFromPrev()
@@ -2328,8 +2271,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                                 }
                             }
                             else {
-                                if (!showAds(ADS_SELECTED_FROM_TABLE))
-                                    showPlayOnlineDialog()
+                                showPlayOnlineDialog()
                             }
                         }
 
@@ -2713,19 +2655,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                     diceView(diceRoll, diceHold)
                 if (engine != null)
                     performEngineCommands("logging " + prefs.getBoolean("logging", false))
-                if (prefs.getBoolean("advertising", true)) {
-                    loadRewardedVideoAd()
-                    if (!prevAdvertising) {
-                        val ed = prefs.edit()
-                        ed.putLong("adsDelay", 0L)
-                        ed.apply()
-                    }
-                }
             }
             NEW_GAME_REQUEST_CODE, FILE_MANAGER_LOAD_REQUEST_CODE -> if (resultCode == RESULT_OK) {
                 engineIsRunning = false
-                    if (requestCode == FILE_MANAGER_LOAD_REQUEST_CODE && data != null)
-                        setPrefs(data.getStringExtra("gameData"))
+                if (requestCode == FILE_MANAGER_LOAD_REQUEST_CODE && data != null)
+                    setPrefs(data.getStringExtra("gameData"))
                 if (prefs.getBoolean("gameFromFile", false) and !prefs.getBoolean("cbNewGame", false)) {
                     setUI()
                     return
@@ -2783,13 +2717,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                         // The signed in account is stored in the result.
                         val signedInAccount = result.signInAccount
                         onConnected(signedInAccount, true)
-                    }
-                    else {
+                    } else {
                         onDisconnected()
                         showErrorMessage(R.string.notLoggedIn)
                     }
-                }
-                else {
+                } else {
                     onDisconnected()
                     showErrorMessage(R.string.notLoggedIn)
                 }
@@ -2819,7 +2751,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 val notifications = ref.child("notificationRequests")
                 val notification: HashMap<String, String> = HashMap()
                 notification["title"] = getStringByLocal(this@MainActivity, R.string.invitationTitle, null, null, user.language!!)
-                notification["message"] = getStringByLocal(this@MainActivity, R.string.playerInvitation, mPlayerName ?: "", gameType, user.language!!)
+                notification["message"] = getStringByLocal(this@MainActivity, R.string.playerInvitation, mPlayerName
+                        ?: "", gameType, user.language!!)
                 notification["actionId"] = "1"
                 notification["matchId"] = ""
                 notification["fromUsername"] = mPlayerName ?: ""
@@ -2831,7 +2764,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 notification["timestamp"] = ts
                 notifications.push().setValue(notification)
 
-                Toast.makeText(applicationContext, getString(R.string.playerInvited, user.name ?: ""), Toast.LENGTH_SHORT).show()
+                Toast.makeText(applicationContext, getString(R.string.playerInvited, user.name
+                        ?: ""), Toast.LENGTH_SHORT).show()
 
             }
 
@@ -2894,7 +2828,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             val notifications = ref.child("notificationRequests")
             val notification: HashMap<String, String> = HashMap()
             notification["title"] = getStringByLocal(this@MainActivity, R.string.invitationTitle, null, null, userLanguage)
-            notification["message"] = getStringByLocal(this@MainActivity, R.string.invitationAccepted, mPlayerName ?: "", null, userLanguage)
+            notification["message"] = getStringByLocal(this@MainActivity, R.string.invitationAccepted, mPlayerName
+                    ?: "", null, userLanguage)
             notification["actionId"] = "2"
             notification["matchId"] = matchId
             notification["fromUsername"] = ""
@@ -2928,7 +2863,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             val notifications = ref.child("notificationRequests")
             val notification: HashMap<String, String> = HashMap()
             notification["title"] = getStringByLocal(this@MainActivity, R.string.invitationTitle, null, null, userLanguage)
-            notification["message"] = getStringByLocal(this@MainActivity, R.string.playerNotAvailable, mPlayerName ?: "", null, userLanguage)
+            notification["message"] = getStringByLocal(this@MainActivity, R.string.playerNotAvailable, mPlayerName
+                    ?: "", null, userLanguage)
             notification["actionId"] = "7"
             notification["matchId"] = matchId
             notification["fromUsername"] = mPlayerName ?: "???"
@@ -2964,7 +2900,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             val notifications = ref.child("notificationRequests")
             val notification: HashMap<String, String> = HashMap()
             notification["title"] = getStringByLocal(this@MainActivity, R.string.info, null, null, userLanguage)
-            notification["message"] = getStringByLocal(this@MainActivity, R.string.matchDeletedByPlayer, mPlayerName ?: "", null, userLanguage)
+            notification["message"] = getStringByLocal(this@MainActivity, R.string.matchDeletedByPlayer, mPlayerName
+                    ?: "", null, userLanguage)
             if (actionId == "8")
                 notification["message"] = getStringByLocal(this@MainActivity, R.string.gameOver, null, null, userLanguage)
             notification["actionId"] = actionId
@@ -3073,15 +3010,13 @@ class MainActivity : Activity(), View.OnTouchListener {
                 menuCurrentMatch -> {
                     if (mMatchId != null) {
                         startDialogCurrentMatch(mMatchId!!)
-                    }
-                    else {
+                    } else {
                         initOnline()
                         updateTable(true)
                         showPlayOnlineDialog()
                     }
                 }
                 menuSettings -> {
-                    prevAdvertising = prefs.getBoolean("advertising", true)
                     preferencesIntent = Intent(this, Preferences::class.java)
                     startActivityForResult(preferencesIntent, PREFERENCES_REQUEST_CODE)
                 }
@@ -3144,7 +3079,6 @@ class MainActivity : Activity(), View.OnTouchListener {
                     startActivityForResult(fileManagerIntent, FILE_MANAGER_LOAD_REQUEST_CODE)
                 }
                 menuSettings -> {
-                    prevAdvertising = prefs.getBoolean("advertising", true)
                     preferencesIntent = Intent(this, Preferences::class.java)
                     startActivityForResult(preferencesIntent, PREFERENCES_REQUEST_CODE)
                 }
@@ -3169,7 +3103,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         accountingDialog.setMessage(text)
         accountingDialog.setCancelable(true)
         accountingDialog.setOnCancelListener {
-            showAds(ADS_SELECTED_FROM_ACCOUNTING)
         }
         mAccountingDialog = accountingDialog.create()
         mAccountingDialog!!.show()
@@ -3346,7 +3279,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                         }
                         startActivityForResult(infoIntent, INFO_REQUEST_CODE)
                     }
-                    2 ->  {
+                    2 -> {
                         when (userLanguage) {
                             "de" -> infoIntent.data = Uri.parse(URI_PRIVACY_POLICY_DE)
                             else -> infoIntent.data = Uri.parse(URI_PRIVACY_POLICY_EN)
@@ -3407,7 +3340,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 setRelativeLayout(diceState)
             }
         }
-        ed.isPlayerColumn = prefs.getBoolean("isPlayerColumn", true)
+        ed.isPlayerColumn = prefs.getBoolean("isPlayerColumn", false)
         ed.isSummation = prefs.getBoolean("isSummation", false)
         if (ed.playerNumber == 3) {
             ed.isFlipScreen = false
@@ -3790,7 +3723,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             btnPlayerRound.visibility = TextView.VISIBLE
             if (isDoingTurn) {
                 when (diceModus) {
-                    0,1 -> {
+                    0, 1 -> {
                         btnDice.visibility = ImageView.VISIBLE
                         btnDice.setImageResource(R.drawable.button_dice)
 
@@ -3820,13 +3753,11 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                                 diceModus = diceModusPrev
                                 diceView(diceRoll, diceHold)
-                            }
-                            else {
+                            } else {
                                 if (btnPlayerResult.text != resources.getString(R.string.confirmEntry))
                                     btnPlayerResult.text = resources.getString(R.string.dataUpdate)
                             }
-                        }
-                        else
+                        } else
                             btnPlayerResult.text = resources.getString(R.string.waitingFor)
                     }
                 }
@@ -3835,8 +3766,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 btnDice.setImageResource(R.drawable.button_stop)
                 btnPlayerRound.visibility = TextView.VISIBLE
                 when (diceModus) {
-                    0,1,2,3 -> btnPlayerResult.text = resources.getString(R.string.waitingFor)
-                    4,5 -> {
+                    0, 1, 2, 3 -> btnPlayerResult.text = resources.getString(R.string.waitingFor)
+                    4, 5 -> {
                         btnPlayerResult.text = resources.getString(R.string.waitForOk)
                         btnPlayerRound.visibility = TextView.INVISIBLE
                     }
@@ -3912,16 +3843,16 @@ class MainActivity : Activity(), View.OnTouchListener {
         when (playerId) {
             'A' -> {
                 name =
-                    if (!prefs.getBoolean("enginePlayerA", true) or (diceState == 0) or prefs.getBoolean("playOnline", false)) {
-                        btnPlayerIcon.setImageResource(R.drawable.button_human_a)
-                        if (prefs.getBoolean("playOnline", false))
-                            mMatchBaseData?.nameA ?: "???"
-                        else
-                            prefs.getString("nameA", resources.getString(R.string.yourName))
-                    } else {
-                        btnPlayerIcon.setImageResource(R.drawable.button_mobile_a)
-                        runPrefs.getString("engineNameA", "")
-                    }
+                        if (!prefs.getBoolean("enginePlayerA", true) or (diceState == 0) or prefs.getBoolean("playOnline", false)) {
+                            btnPlayerIcon.setImageResource(R.drawable.button_human_a)
+                            if (prefs.getBoolean("playOnline", false))
+                                mMatchBaseData?.nameA ?: "???"
+                            else
+                                prefs.getString("nameA", resources.getString(R.string.yourName))
+                        } else {
+                            btnPlayerIcon.setImageResource(R.drawable.button_mobile_a)
+                            runPrefs.getString("engineNameA", "")
+                        }
                 btnPlayerRound.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
                 btnPlayerName.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
                 btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
@@ -3938,16 +3869,16 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
             'B' -> {
                 name =
-                    if (!prefs.getBoolean("enginePlayerB", false) or (diceState == 0) or prefs.getBoolean("playOnline", true)) {
-                        btnPlayerIcon.setImageResource(R.drawable.button_human_b)
-                        if (prefs.getBoolean("playOnline", false))
-                            mMatchBaseData?.nameB ?: "???"
-                        else
-                            prefs.getString("nameB", resources.getString(R.string.yourName))
-                    } else {
-                        btnPlayerIcon.setImageResource(R.drawable.button_mobile_b)
-                        runPrefs.getString("engineNameB", "")
-                    }
+                        if (!prefs.getBoolean("enginePlayerB", false) or (diceState == 0) or prefs.getBoolean("playOnline", true)) {
+                            btnPlayerIcon.setImageResource(R.drawable.button_human_b)
+                            if (prefs.getBoolean("playOnline", false))
+                                mMatchBaseData?.nameB ?: "???"
+                            else
+                                prefs.getString("nameB", resources.getString(R.string.yourName))
+                        } else {
+                            btnPlayerIcon.setImageResource(R.drawable.button_mobile_b)
+                            runPrefs.getString("engineNameB", "")
+                        }
 
                 btnPlayerRound.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                 btnPlayerName.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
@@ -3961,13 +3892,13 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
             'C' -> {
                 name =
-                    if (!prefs.getBoolean("enginePlayerC", false) or (diceState == 0) or prefs.getBoolean("playOnline", false)) {
-                        btnPlayerIcon.setImageResource(R.drawable.button_human_c)
-                        prefs.getString("nameC", resources.getString(R.string.yourName))
-                    } else {
-                        btnPlayerIcon.setImageResource(R.drawable.button_mobile_c)
-                        runPrefs.getString("engineNameC", "")
-                    }
+                        if (!prefs.getBoolean("enginePlayerC", false) or (diceState == 0) or prefs.getBoolean("playOnline", false)) {
+                            btnPlayerIcon.setImageResource(R.drawable.button_human_c)
+                            prefs.getString("nameC", resources.getString(R.string.yourName))
+                        } else {
+                            btnPlayerIcon.setImageResource(R.drawable.button_mobile_c)
+                            runPrefs.getString("engineNameC", "")
+                        }
                 btnPlayerRound.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerC))
                 btnPlayerName.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerC))
                 btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerC))
@@ -4214,6 +4145,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                         else
                             str + tmp[i] + " "
             }
+
             edi.putString("diceDouble1", str)
             edi.putBoolean("isDouble1", java.lang.Boolean.valueOf(pg.getTag("Double1")))
             edi.putBoolean("isServedDouble1", java.lang.Boolean.valueOf(pg.getTag("ServedDouble1")))
@@ -4310,6 +4242,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         edi.putString("diceText", ed.diceText)                     // canceled
         edi.putString("diceTextDouble1", ed.diceTextDouble1)       // canceled
 
+        edi.putInt("adsCount", adsCount)
+
         edi.apply()
     }
 
@@ -4363,6 +4297,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         isDouble1 = runPrefs.getBoolean("isDouble1", false)
 
 //        Log.i(TAG, "getRunPrefs(), isDouble1: $isDouble1")
+//        Log.i(TAG, "getRunPrefs(), diceDouble1: ${runPrefs.getString("diceDouble1", "")}")
 
         if (runPrefs.getString("diceDouble1", "") != "") {
             strSp = runPrefs.getString("diceDouble1", "")!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -4377,6 +4312,8 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         selectedCol = runPrefs.getInt("selectedCol", selectedCol)
         selectedRow = runPrefs.getInt("selectedRow", selectedRow)
+
+        adsCount = runPrefs.getInt("adsCount", 1)
 
     }
 
@@ -4685,6 +4622,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             isInitRound = true
 
 //            Log.i(TAG, "C animationDiceBoard(), setOnlineMessage()")
+
             if (prefs.getBoolean("playOnline", false))
                 setOnlineMessage()
             else {
@@ -4845,6 +4783,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             isInitRound = true
 
 //        Log.i(TAG, "D initBoard(), setOnlineMessage()")
+
         if (prefs.getBoolean("playOnline", false))
             setOnlineMessage()
         else {
@@ -5001,37 +4940,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         return res
     }
 
-    private fun showMainDialog() {
-        dialogMain.setCancelable(true)
-        dialogMain.onlineIcon.setOnClickListener {
-            playOnline(false)
-            dialogMain.dismiss()
-        }
-        dialogMain.onlineText.setOnClickListener {
-            playOnline(false)
-            dialogMain.dismiss()
-        }
-        dialogMain.offlineIcon.setOnClickListener {
-            playOffline(true)
-            dialogMain.dismiss()
-        }
-        dialogMain.offlineText.setOnClickListener {
-            playOffline(true)
-            dialogMain.dismiss()
-        }
-        dialogMain.exitIcon.setOnClickListener {
-            dialogMain.dismiss()
-            finishApp(true)
-        }
-        dialogMain.exitText.setOnClickListener {
-            dialogMain.dismiss()
-            finishApp(true)
-        }
-
-        if (!dialogMain.isShowing && !isFinishing)
-            dialogMain.show()
-    }
-
     private fun playOnline(isAppStart: Boolean) {
         if (engineIsRunning) {
             Toast.makeText(applicationContext, getString(R.string.isStopped), Toast.LENGTH_SHORT).show()
@@ -5076,8 +4984,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun playOffline(initData: Boolean) {
         if (!isOnlineActive) {
 
-            val isFinish = false
-            logOutUpdateUser(isFinish, true)
+            logOutUpdateUser(isFinishApp = false, updateUser = true)
 
             ed.isFlipScreen = false
             isOrientationReverse = false
@@ -5102,71 +5009,69 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
     }
 
-    private fun showAds(actionID: String): Boolean {
+    private fun showAds() {
 
-//        Log.d(TAG, "showAds()")
-
-        var isAdsShowing = false
         if (prefs.getBoolean("advertising", true)) {
             val timeStamp = System.currentTimeMillis()
-            var setTimeStamp = false
             if (timeStamp - prefs.getLong("adsDelay", 0L) >= ADS_DELAY) {
 
 //                Log.d(TAG, "showAds(), timeStamp: " + timeStamp + ", adsDelay" + prefs.getLong("adsDelay", 0L) + ", ADS_DELAY: " + ADS_DELAY)
 
-                isAdsShowing = true
                 if (mRewardedAd.isLoaded) {
                     val activityContext: Activity = this
                     val adCallback = object: RewardedAdCallback() {
                         override fun onRewardedAdOpened() {
-                            isAdsSelected = true
-                            adsStartTime = System.currentTimeMillis()
+
                         }
                         override fun onRewardedAdClosed() {
-                            if (prefs.getBoolean("playOnline", false)) {
-                                if (!(isAdsSelected && adsStartTime != 0L && System.currentTimeMillis() - adsStartTime >= ONLINE_ADS_MIN_TIME))
-                                    isAdsSelected = false
-                                getEpFromAds()
-                            }
 
-                            loadRewardedVideoAd()
+                            val ed = prefs.edit()
+                            ed.putLong("adsDelay", timeStamp)
+                            ed.apply()
+
+                            if (adsCount > MAX_ADS_COUNT)
+                                adsCount = MAX_ADS_COUNT
+
+                            finishAfterAds()
 
                         }
-//                                override fun onUserEarnedReward(@NonNull reward: RewardItem) {
                         override fun onUserEarnedReward(p0: com.google.android.gms.ads.rewarded.RewardItem) {
-                            if (prefs.getBoolean("playOnline", false)) {
-                                getEpFromAds()
-                            }
+
+                            adsCount = p0.amount
+
                         }
                         override fun onRewardedAdFailedToShow(errorCode: Int) {
-                            // Ad failed to display.
+
+                            finishAfterAds()
+
                         }
                     }
+
                     mRewardedAd.show(activityContext, adCallback)
-                    setAnalyticsLogEvent(actionID)
-                    setTimeStamp = true
-                } else {
-                    loadRewardedVideoAd()
-                }
 
-                if (setTimeStamp) {
-                    val ed = prefs.edit()
-                    ed.putLong("adsDelay", timeStamp)
-                    ed.apply()
                 }
+                else
+                    finishAfterAds()
+
             }
+            else
+                finishAfterAds()
         }
+        else
+            finishAfterAds()
 
-        return isAdsShowing
     }
 
-    private fun setAnalyticsLogEvent(actionID: String) {
-        val bundle = Bundle()
-        if (prefs.getBoolean("playOnline", false))
-            bundle.putString("fromOnline", actionID)
-        else
-            bundle.putString("fromOffline", actionID)
-        firebaseAnalytics.logEvent("adsSelected", bundle)
+    private fun finishAfterAds() {
+
+//        Log.d(TAG, "finishAfterAds(), adsCount: $adsCount")
+
+        adsCount--
+        val edi = runPrefs.edit()
+        edi.putInt("adsCount", adsCount)
+        edi.apply()
+        finish()
+
     }
 
     private fun showMatchDialog(matchList: ArrayList<MatchList>, setAllChecked: Boolean) {
@@ -5200,7 +5105,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         dialogMatch.matchListView.adapter = adapter
         val lastViewItemIndex = dialogMatch.matchListView.lastVisiblePosition
         dialogMatch.matchListView.setSelection(lastViewItemIndex)
-        dialogMatch.matchListView.onItemClickListener = AdapterView.OnItemClickListener {  _, _, x, _ ->
+        dialogMatch.matchListView.onItemClickListener = AdapterView.OnItemClickListener { _, _, x, _ ->
             matchList[x].selected = !matchList[x].selected
             val firstViewItemIndex = dialogMatch.matchListView.firstVisiblePosition
             showMatchDialog(matchList, dialogMatch.matchCheckBoxAll.isChecked)
@@ -5460,25 +5365,18 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
                 dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectangleyellow)
                 dialogTwoBtn.action2.setOnClickListener {
-                    if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                        setLeaderboardH()
-                        showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                                getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                                getString(R.string.appContinue),
-                                getString(R.string.advertising))
-                    } else {
 
-                        continueOnlineMatch(actionId)
+                    continueOnlineMatch(actionId)
 
-                        dialogTwoBtn.dismiss()
-                        dialogPlayerQuery.dismiss()
-                        if (mAccountingDialog != null) {
-                            if (mAccountingDialog!!.isShowing)
-                                mAccountingDialog!!.dismiss()
-                            if (mAccountingDialog!!.isShowing)
-                                mAccountingDialog!!.dismiss()
-                        }
+                    dialogTwoBtn.dismiss()
+                    dialogPlayerQuery.dismiss()
+                    if (mAccountingDialog != null) {
+                        if (mAccountingDialog!!.isShowing)
+                            mAccountingDialog!!.dismiss()
+                        if (mAccountingDialog!!.isShowing)
+                            mAccountingDialog!!.dismiss()
                     }
+
                 }
                 dialogTwoBtn.action1.visibility = ImageView.VISIBLE
                 dialogTwoBtn.action2.visibility = ImageView.VISIBLE
@@ -5504,16 +5402,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
         dialogTwoBtn.action2.setOnClickListener {
             dialogTwoBtn.dismiss()
-            if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                setLeaderboardH()
-                showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                        getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                        getString(R.string.appContinue),
-                        getString(R.string.advertising))
-            }
-            else {
-                invitePlayer(user)
-            }
+            invitePlayer(user)
         }
         dialogTwoBtn.action1.visibility = ImageView.VISIBLE
         dialogTwoBtn.action2.visibility = ImageView.VISIBLE
@@ -5622,19 +5511,10 @@ class MainActivity : Activity(), View.OnTouchListener {
                 dialogTwoBtn.dismiss()
                 dialogInfo.dismiss()
                 dismissAllDialogs()
-                notificationIntent = if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                    setLeaderboardH()
-                    showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                            getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                            getString(R.string.appContinue),
-                            getString(R.string.advertising))
-                    null
-                } else {
-                    val inviterUserId = intent.extras?.getString("fromUserId") ?: ""
-                    if (inviterUserId.isNotEmpty())
-                        initMatch(inviterUserId)
-                    null
-                }
+                val inviterUserId = intent.extras?.getString("fromUserId") ?: ""
+                if (inviterUserId.isNotEmpty())
+                    initMatch(inviterUserId)
+                notificationIntent = null
             }
             dialogTwoBtn.action1.visibility = ImageView.VISIBLE
             dialogTwoBtn.action2.visibility = ImageView.VISIBLE
@@ -5658,7 +5538,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             if (user != null && !user.singleGame!!)
                 gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
 
-            var mes = getString(R.string.playerInvitation, intent.extras?.getString("fromUsername") ?: "", gameType)
+            var mes = getString(R.string.playerInvitation, intent.extras?.getString("fromUsername")
+                    ?: "", gameType)
             val actionId = intent.extras?.getString("actionId") ?: ""
             val matchId = intent.extras?.getString("matchId") ?: ""
 
@@ -5710,21 +5591,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                     dialogTwoBtn.dismiss()
                     dialogInfo.dismiss()
                     dismissAllDialogs()
-                    if (prefs.getBoolean("playOnline", false) && mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                        setLeaderboardH()
-                        showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                                getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                                getString(R.string.appContinue),
-                                getString(R.string.advertising))
-                    } else {
+                    if (prefs.getBoolean("playOnline", false)) {
                         notificationIntent = intent
                         if (actionId == "1" || actionId == "3" || actionId == "4")
                             notificationNoDialog = true
-
-//                        Log.i(TAG, "showOfflineInvitationFromNotificatioDialog(), start playOnline()")
-
                         playOnline(false)
-
                     }
                 }
                 dialogTwoBtn.action1.visibility = ImageView.VISIBLE
@@ -5766,25 +5637,14 @@ class MainActivity : Activity(), View.OnTouchListener {
                     dialogQuickMatchInvitation.dismiss()
                     dialogInfo.dismiss()
                     dismissAllDialogs()
-                    if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                        setLeaderboardH()
-                        showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                                getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                                getString(R.string.appContinue),
-                                getString(R.string.advertising))
-                    } else {
-                        GlobalScope.launch(Dispatchers.Main) {
-                            quickMatchUpdateTime = System.currentTimeMillis()
-                            val defferedSetQuickMatchUserId = async { setQuickMatchUserId("0") }
-                            defferedSetQuickMatchUserId.await()
-                            defferedSetQuickMatchUserId.cancel()
-                        }
-                        btnPlayerResult.text = resources.getString(R.string.waitingForPlayer, userName)
-                        initMatch(userId)
-
-//        Log.i(TAG, "invitePlayerFromNotification(), fromUsername: $fromUsername, fromUserId: $fromUserId, fromGpsId: $fromGpsId")
-
+                    GlobalScope.launch(Dispatchers.Main) {
+                        quickMatchUpdateTime = System.currentTimeMillis()
+                        val defferedSetQuickMatchUserId = async { setQuickMatchUserId("0") }
+                        defferedSetQuickMatchUserId.await()
+                        defferedSetQuickMatchUserId.cancel()
                     }
+                    btnPlayerResult.text = resources.getString(R.string.waitingForPlayer, userName)
+                    initMatch(userId)
 
                 }
                 dialogQuickMatchInvitation.action1.visibility = ImageView.VISIBLE
@@ -5819,53 +5679,6 @@ class MainActivity : Activity(), View.OnTouchListener {
             infoIntent.data = Uri.parse(URI_ESCALERO)
             infoIntent.setPackage("com.android.vending")
             startActivityForResult(infoIntent, INFO_REQUEST_CODE)
-        }
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
-        if (!isFinishing)
-            dialogTwoBtn.show()
-    }
-
-    private fun setLeaderboardH() {
-        var prefsTimeStamp = runPrefs.getLong("leaderboardTimestamp", 1L)
-        if (prefsTimeStamp == 0L) {
-            prefsTimeStamp = System.currentTimeMillis()
-        }
-        val diff = System.currentTimeMillis() - prefsTimeStamp
-        mLeaderboardH = (ONLINE_LEADERBORD_NEXT_BONUS - diff) / 3600000L
-    }
-
-    private fun showEscaleroPointsDialog(mesTitle: String, mes: String, action1: String, action2: String) {
-        dialogTwoBtn.mes2Title.text = mesTitle
-        dialogTwoBtn.mes2.text = mes
-        dialogTwoBtn.action1.text = action1
-        dialogTwoBtn.action2.text = action2
-        dialogTwoBtn.setCancelable(true)
-        dialogTwoBtn.setOnCancelListener {
-            dialogTwoBtn.dismiss()
-        }
-        dialogTwoBtn.action1.setOnClickListener {
-
-            dialogTwoBtn.dismiss()
-        }
-        if (prefs.getBoolean("advertising", true))
-            dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectanglegreen)
-        else
-            dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectanglered)
-        dialogTwoBtn.action2.setOnClickListener {
-
-//            Log.d(TAG, "showEscaleroPointsDialog(), action promotion video")
-
-            if (prefs.getBoolean("advertising", true)) {
-                val ed = prefs.edit()
-                ed.putLong("adsDelay", 0L)
-                ed.apply()
-                showAds(ADS_SELECTED_FROM_EP)
-                dialogTwoBtn.dismiss()
-            }
-            else {
-                showAskForAdvertisingDialog()
-            }
         }
         dialogTwoBtn.action1.visibility = ImageView.VISIBLE
         dialogTwoBtn.action2.visibility = ImageView.VISIBLE
@@ -6029,46 +5842,6 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     }
 
-    private fun showRewardBonus(diceRoll: IntArray, diceResult: String, epBonus: String, epOld: String, epNew: String) {
-        if (isAdsSelected) {
-            dialogRewardBonus.diceD_1.visibility = ImageView.VISIBLE
-            dialogRewardBonus.diceD_2.visibility = ImageView.VISIBLE
-            dialogRewardBonus.diceD_3.visibility = ImageView.VISIBLE
-            dialogRewardBonus.diceD_4.visibility = ImageView.VISIBLE
-            dialogRewardBonus.diceD_5.visibility = ImageView.VISIBLE
-            dialogRewardBonus.diceD_1.setImageResource(getImageId(diceRoll[0]))
-            dialogRewardBonus.diceD_2.setImageResource(getImageId(diceRoll[1]))
-            dialogRewardBonus.diceD_3.setImageResource(getImageId(diceRoll[2]))
-            dialogRewardBonus.diceD_4.setImageResource(getImageId(diceRoll[3]))
-            dialogRewardBonus.diceD_5.setImageResource(getImageId(diceRoll[4]))
-        }
-        else {
-            dialogRewardBonus.diceD_1.visibility = ImageView.INVISIBLE
-            dialogRewardBonus.diceD_2.visibility = ImageView.INVISIBLE
-            dialogRewardBonus.diceD_3.visibility = ImageView.INVISIBLE
-            dialogRewardBonus.diceD_4.visibility = ImageView.INVISIBLE
-            dialogRewardBonus.diceD_5.visibility = ImageView.INVISIBLE
-        }
-
-        val txt = "$diceResult\n$epBonus\n$epOld,  $epNew"
-        dialogRewardBonus.mes2.text = txt
-
-        dialogRewardBonus.setCancelable(true)
-        dialogRewardBonus.setOnCancelListener {
-            dialogRewardBonus.dismiss()
-        }
-        dialogRewardBonus.action1.setOnClickListener {
-            dialogRewardBonus.dismiss()
-        }
-        dialogRewardBonus.action2.setOnClickListener {
-            showPlayOnlineDialog()
-            dialogRewardBonus.dismiss()
-        }
-
-        if (!isFinishing)
-            dialogRewardBonus.show()
-    }
-
     private fun updatePlayerEp(playerId: String, result: Long) {
 
 //        Log.d(TAG, "updatePlayerEp(), playerId: $playerId, result: $result")
@@ -6216,34 +5989,6 @@ class MainActivity : Activity(), View.OnTouchListener {
             dialogTwoBtn.show()
     }
 
-    private fun showAskForAdvertisingDialog() {
-        dialogTwoBtn.mes2Title.text = getString(R.string.info)
-        dialogTwoBtn.mes2.text = getString(R.string.activateAdvertising)
-        dialogTwoBtn.action1.text = getString(R.string.dialogNo)
-        dialogTwoBtn.action2.text = getString(R.string.dialogYes)
-        dialogTwoBtn.setCancelable(true)
-        dialogTwoBtn.setOnCancelListener {
-            dialogTwoBtn.dismiss()
-        }
-        dialogTwoBtn.action1.setOnClickListener {
-            dialogTwoBtn.dismiss()
-        }
-        dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectangleyellow)
-        dialogTwoBtn.action2.setOnClickListener {
-            val ed = prefs.edit()
-            ed.putBoolean("advertising", true)
-            ed.putLong("adsDelay", 0L)
-            ed.apply()
-            if (!showAds(ADS_SELECTED_FROM_ASK))
-                Toast.makeText(applicationContext, getString(R.string.currentlyNoAds), Toast.LENGTH_LONG).show()
-            dialogTwoBtn.dismiss()
-        }
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
-        if (!isFinishing)
-            dialogTwoBtn.show()
-    }
-
     //ONLINE - methods, general
     private fun showPlayOnlineDialog() {
 
@@ -6365,15 +6110,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                     if (isOnlineActive)
                         showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
                     else {
-                        if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                            setLeaderboardH()
-                            showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                                getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                                getString(R.string.appContinue),
-                                getString(R.string.advertising))
-                        }
-                        else
-                            startQuickMatch()
+                        startQuickMatch()
                         dialogPlayOnline.dismiss()
                     }
                 }
@@ -6404,53 +6141,6 @@ class MainActivity : Activity(), View.OnTouchListener {
 //                Log.d(TAG, "showPlayOnlineDialog(), leaderboardScore: $mPlayerEp")
 
                 setEP()
-
-                var prefsTimeStamp = runPrefs.getLong("leaderboardTimestamp", 1L)
-
-//                Log.d(TAG, "showPlayOnlineDialog(), prefsTimeStamp: $prefsTimeStamp")
-
-                if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-
-                    if (prefsTimeStamp == 0L) {
-                        prefsTimeStamp = System.currentTimeMillis()
-                    }
-                    val diff = System.currentTimeMillis() - prefsTimeStamp
-                    mLeaderboardH = (ONLINE_LEADERBORD_NEXT_BONUS - diff) / 3600000L
-
-//                    Log.d(TAG, "C1 showPlayOnlineDialog(), prefsTimeStamp: $prefsTimeStamp, systemTimeStamp: ${System.currentTimeMillis()}")
-//                    Log.d(TAG, "C2 showPlayOnlineDialog(), diff time(ms): $diff, mLeaderboardH: $mLeaderboardH")
-
-                    if (mLeaderboardH <= 0L || diff > ONLINE_LEADERBORD_NEXT_BONUS) {
-                        prefsTimeStamp = 0L
-                        mLeaderboardH = 0L
-
-//                    Log.d(TAG, "showPlayOnlineDialog(), 1 mPlayerEp: $mPlayerEp")
-
-                        mPlayerEp += ONLINE_LEADERBORD_BONUS_1
-                        val ld = Leaderboard()
-                        ld.name = mPlayerName
-                        ld.score = mPlayerEp
-                        ld.uid = mPlayerId
-                        val defferedUpdateLeaderboardData = async { updateLeaderboardData(mPlayerId!!, ld) }
-                        defferedUpdateLeaderboardData.await()
-                        defferedUpdateLeaderboardData.cancel()
-
-//                        Log.d(TAG, "showPlayOnlineDialog(), 2 mPlayerEp: $mPlayerEp")
-
-                        setEP()
-
-                        showPlayOnlineDialog()
-
-                    }
-
-                }
-                else {
-                    prefsTimeStamp = 0L
-                }
-
-                val edi = runPrefs.edit()
-                edi.putLong("leaderboardTimestamp", prefsTimeStamp)
-                edi.apply()
 
             }
 
@@ -6918,21 +6608,13 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         GlobalScope.launch(Dispatchers.Main) {
 
-            if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                setLeaderboardH()
-                showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                        getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                        getString(R.string.appContinue),
-                        getString(R.string.advertising))
-            } else {
-                mMatchId = matchId
-                val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                mMatchBaseData = defferedGetMatchBaseData.await()
-                defferedGetMatchBaseData.cancel()
-                val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-                mMatchUpdateData = defferedGetMatchUpdateData.await()
-                defferedGetMatchUpdateData.cancel()
-            }
+            mMatchId = matchId
+            val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
+            mMatchBaseData = defferedGetMatchBaseData.await()
+            defferedGetMatchBaseData.cancel()
+            val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+            mMatchUpdateData = defferedGetMatchUpdateData.await()
+            defferedGetMatchUpdateData.cancel()
 
             if (mMatchId != null && mMatchBaseData != null && mMatchUpdateData != null) {
                 dismissAllDialogs()
@@ -7300,28 +6982,20 @@ class MainActivity : Activity(), View.OnTouchListener {
                                     dialogTwoBtn.dismiss()
                                     dismissAllDialogs()
                                     notificationNoDialog = false
-                                    if (mPlayerEp in 0 until ONLINE_LEADERBORD_PLAYER_MIN) {
-                                        setLeaderboardH()
-                                        showEscaleroPointsDialog(getString(R.string.escaleroPoints),
-                                                getString(R.string.escaleroPointsInfo, mPlayerEp, mLeaderboardH, ONLINE_LEADERBORD_BONUS_1),
-                                                getString(R.string.appContinue),
-                                                getString(R.string.advertising))
+                                    if (actionId == "3" || actionId == "4") {
+                                        mMatchId = matchId
+                                        val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
+                                        mMatchBaseData = defferedGetMatchBaseData.await()
+                                        defferedGetMatchBaseData.cancel()
+                                        val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+                                        mMatchUpdateData = defferedGetMatchUpdateData.await()
+                                        defferedGetMatchUpdateData.cancel()
+
+                                        continueOnlineMatch(actionId)
+
                                     } else {
-                                        if (actionId == "3" || actionId == "4") {
-                                            mMatchId = matchId
-                                            val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                                            mMatchBaseData = defferedGetMatchBaseData.await()
-                                            defferedGetMatchBaseData.cancel()
-                                            val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-                                            mMatchUpdateData = defferedGetMatchUpdateData.await()
-                                            defferedGetMatchUpdateData.cancel()
-
-                                            continueOnlineMatch(actionId)
-
-                                        } else {
-                                            if (inviterUserId.isNotEmpty())
-                                                initMatch(inviterUserId)
-                                        }
+                                        if (inviterUserId.isNotEmpty())
+                                            initMatch(inviterUserId)
                                     }
                                 } else {
                                     when (actionId) {
@@ -7405,7 +7079,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     }
 
-    private fun updateUserStatus(playerId: String?=null, ads: Boolean=true, chat: Boolean=false, notifications: Boolean=true, online: Boolean=true, playing: Boolean=false, singleGame: Boolean=true) {
+    private fun updateUserStatus(playerId: String? = null, ads: Boolean = true, chat: Boolean = false, notifications: Boolean = true, online: Boolean = true, playing: Boolean = false, singleGame: Boolean = true) {
 
 //        Log.d(TAG, "updateUserStatus(), playerId: $playerId")
 
@@ -7438,9 +7112,6 @@ class MainActivity : Activity(), View.OnTouchListener {
 //        Log.d(TAG, "logOutUpdateUser(), isFinishApp: $isFinishApp, updateUser: $updateUser, mPlayerName: $mPlayerName, mPlayerId: $mPlayerId")
 
         GlobalScope.launch(Dispatchers.Main) {
-
-            if (isFinishApp)
-                Toast.makeText(applicationContext, getString(R.string.appClosing), Toast.LENGTH_LONG).show()
 
             if (updateUser && !mPlayerId.isNullOrBlank() && !mPlayerName.isNullOrBlank()) {
 
@@ -7499,7 +7170,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (isFinishApp) {
                     setAppStart(true)
                     setRunPrefs()
-                    finish()
+                    if (adsCount <= 0)
+                        showAds()
+                    else {
+                        finishAfterAds()
+                    }
                 }
 
             }
@@ -7507,7 +7182,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (isFinishApp) {
                     setAppStart(true)
                     setRunPrefs()
-                    finish()
+                    if (adsCount <= 0)
+                        showAds()
+                    else {
+                        finishAfterAds()
+                    }
                 }
             }
         }
@@ -7588,10 +7267,10 @@ class MainActivity : Activity(), View.OnTouchListener {
             ed.onlineCheckId = mPlayerName!! + " " + Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID).subSequence(0, 7)
 
         when (onlineAction) {
-            ONLINE_ACTIVE_ENTRY         -> {
+            ONLINE_ACTIVE_ENTRY -> {
                 btnDice.visibility = ImageView.INVISIBLE
             }
-            ONLINE_ACTIVE_TURN  -> {
+            ONLINE_ACTIVE_TURN -> {
                 isOnlineEntry = false
 
                 ed.computeNextPlayerToMove(ed.playerToMove)
@@ -7662,10 +7341,10 @@ class MainActivity : Activity(), View.OnTouchListener {
         setRunPrefs()
 
         when (gameStatus) {
-            ONLINE_START                -> {
+            ONLINE_START -> {
                 diceView(diceRoll, diceHold)
             }
-            ONLINE_ACTIVE_ENTRY_STORNO  -> {
+            ONLINE_ACTIVE_ENTRY_STORNO -> {
                 setBtnPlayer(ed.playerToMove)
             }
         }
@@ -8020,8 +7699,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (isRematchAccepted) {
                     isRematchAccepted = false
                     matchDataToDb(true, ONLINE_START_REMATCH)
-                }
-                else {
+                } else {
                     var playerA = mPlayerName!!
                     var playerB = mOponentName!!
                     if (mPlayerABC == "B") {
@@ -8157,6 +7835,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                     else
                         str + tmp[i] + " "
         }
+
+//        Log.d(TAG, "setPrefs(matchUpdateData: MatchUpdateData) , diceDouble1: $str")
+
         edi.putString("diceDouble1", str)
 
         edi.putInt("selectedGridItem", matchUpdateData.gridItem!!.toInt())
@@ -8180,7 +7861,6 @@ class MainActivity : Activity(), View.OnTouchListener {
                 edi.putString("diceHold", ini)
                 edi.putString("diceRollPrev", ini)
                 edi.putString("diceHoldPrev", ini)
-                edi.putString("diceDouble1", ini)
             }
         } else {
             val textStr = position!!.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -8818,30 +8498,22 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         const val ONLINE_LEADERBORD_MAX = 300L
         const val ONLINE_LEADERBORD_MAX_PLAYERS = 100L
-        const val ONLINE_LEADERBORD_PLAYER_MIN = 11L
-        const val ONLINE_LEADERBORD_BONUS_MIN = 5L
         const val ONLINE_LEADERBORD_BONUS_1 = 15L
-        const val ONLINE_LEADERBORD_BONUS_2 = 20L
-        const val ONLINE_LEADERBORD_NEXT_BONUS = 43200000L // 12h
+        const val ONLINE_MAX_USER_MATCHES = 50
 
-        const val ONLINE_MAX_USER_MATCHES = 10
-
-        const val ADS_SELECTED_FROM_TABLE =         "table"
-        const val ADS_SELECTED_FROM_ACCOUNTING =    "accounting"
-        const val ADS_SELECTED_FROM_EP =            "ep"
-        const val ADS_SELECTED_FROM_ASK =           "ask"
-
-        const val ONLINE_ADS_MIN_TIME = 20000L
         const val NOTIFICATION_DELAY = 15000L
-        const val ADS_DELAY = 600000L           // 10   min
+        const val ADS_DELAY = 60000L           // 1   min
         const val QUICK_MATCH_DELAY = 180000L   // 3    min
         const val RECONNECT_TIME = 180000L      // 3    min
         const val MIN_UPDATE_TIME = 400L        // mil sec
-        const val MATCH_TIMEOUT = 600000L       // 10    min
+//        const val MATCH_TIMEOUT = 600000L       // 10    min
+        const val MATCH_TIMEOUT = 300000L       // 5    min
         const val MIN_BTN_DELAY = 300L
 
         const val RC_SIGN_IN = 10001
         const val MIN_VERSION_CODE = 55
+
+        const val MAX_ADS_COUNT = 5
 
     }
 

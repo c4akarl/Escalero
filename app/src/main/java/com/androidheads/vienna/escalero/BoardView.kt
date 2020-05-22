@@ -198,6 +198,10 @@ class BoardView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         setControlValues(mIsSingle, doubleState, mPlayerInfo, mControlValues)
         setRollValues(mRoll, mRollValues, isSelectable, initRollValues)
         setHoldValues(mHold, mHoldIdx, mHoldValues, isSelectable)
+
+//        Log.i(TAG, "updateBoard(), mDouble1: ${mDouble1[0]}, ${mDouble1[1]}, ${mDouble1[2]}, ${mDouble1[3]}, ${mDouble1[4]}")
+//        Log.i(TAG, "updateBoard(), mDouble1Values: ${mDouble1Values[0]}, ${mDouble1Values[1]}, ${mDouble1Values[2]}, ${mDouble1Values[3]}, ${mDouble1Values[4]}")
+
         setDoubleValues(mDouble1, mDouble1Values)
         invalidate()
     }
@@ -639,6 +643,7 @@ class BoardView(context: Context, attrs: AttributeSet) : View(context, attrs) {
                 }
             }
         }
+
         // double
         if (!mIsSingle and (mControlValues[1][1] != 0)) {
             for (i in 0 until diceCnt) {

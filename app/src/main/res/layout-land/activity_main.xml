@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/colorMainActivity"
-    android:orientation="horizontal"
+    android:baselineAligned="false" android:orientation="horizontal"
     tools:context="com.androidheads.vienna.escalero.MainActivity">
 
     <RelativeLayout

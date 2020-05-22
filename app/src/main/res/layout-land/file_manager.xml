@@ -47,7 +47,7 @@
         android:layout_above="@id/btnOk"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:baselineAligned="false" android:orientation="horizontal"
         android:weightSum="2" >
 
         <RelativeLayout

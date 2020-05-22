@@ -121,6 +121,10 @@ class Preferences : Activity() {
             bonusServedGrande.isFocusable = false
         }
 
+        //karl
+        cbMainDialog.visibility = View.INVISIBLE
+        cbAdvertising.visibility = View.INVISIBLE
+
     }
 
     fun onRadioButtonClicked(view: View) {
@@ -229,10 +233,10 @@ class Preferences : Activity() {
         }
         if (cbLogging != null)
             ed.putBoolean("logging", cbLogging!!.isChecked)
-        if (cbMainDialog != null)
-            ed.putBoolean("mainDialog", cbMainDialog!!.isChecked)
-        if (cbAdvertising != null)
-            ed.putBoolean("advertising", cbAdvertising!!.isChecked)
+
+        ed.putBoolean("mainDialog", false)
+        ed.putBoolean("advertising", true)
+
         if (cbNewGame != null)
             ed.putBoolean("cbNewGame", cbNewGame!!.isChecked)
 
