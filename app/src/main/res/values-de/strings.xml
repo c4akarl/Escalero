@@ -73,7 +73,7 @@
     <string name="noEntry">kein Eintrag möglich!</string>
     <string name="infoHomepage">Homepage</string>
     <string name="isDicing">Es wird gewürfelt, bitte warten!</string>
-    <string name="advertising">Werbung</string>
+    <string name="advertising">Werbung ( EP! )</string>
     <string name="infoWiki">Eskalero - WIKI</string>
     <string name="prefsVariants">Spielvarianten</string>
     <string name="prefsDice">Würfel-Optionen</string>
@@ -89,7 +89,7 @@
     <string name="appUserManuel">Benutzerhandbuch</string>
     <string name="appContinue">weiter</string>
     <string name="menu">Eskalero - Menü</string>
-    <string name="menuInfo">Eskalero - Version %1$s (%2$d)</string>
+    <string name="menuInfo">Eskalero - v%1$s (%2$d)</string>
     <string name="appLabel">Eskalero</string>
     <string name="infoAds">Information - Werbung</string>
     <string name="yourName">Ich</string>
@@ -266,5 +266,8 @@
 	<string name="differentAppVersions">Ungleiche App-Versionen. Der aktuelle Vorgang wurde abgebrochen.</string>
 	<string name="correctionNextPlayer">Korrektur! Nächster Spieler: %1$s</string>
 	<string name="extensionMissing">Dateiendung \".pgnd\" fehlt.</string>
+    <string name="getEp">Ich will EP!</string>
+    <string name="noThanks">Nein danke</string>
+    <string name="noEp">Oh weh!  keine EP!</string>
 
 </resources>

@@ -283,10 +283,10 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
         alertDialog.show()
     }
 
-    private class FileTask internal constructor(context: FileManager) : AsyncTask<String, Void, Array<String>>() {
+    private class FileTask(context: FileManager) : AsyncTask<String, Void, Array<String>>() {
 
         private val activityReference: WeakReference<FileManager> = WeakReference(context)
-        internal val extensionPgnd = ".pgnd"
+        val extensionPgnd = ".pgnd"
         private var fileControl: Int = 0
 
         override fun doInBackground(vararg args: String): Array<String>? {
@@ -339,7 +339,8 @@ class FileManager : Activity(), AdapterView.OnItemClickListener {
             override fun compare(o1: Any, o2: Any): Int {
                 val s1 = o1 as String
                 val s2 = o2 as String
-                return s1.toLowerCase().compareTo(s2.toLowerCase())
+//                return s1.toLowerCase().compareTo(s2.toLowerCase())
+                return s1.toLowerCase(Locale.ROOT).compareTo(s2.toLowerCase(Locale.ROOT))
             }
         }
 

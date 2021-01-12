@@ -2,7 +2,6 @@
 <RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
                  android:layout_width="fill_parent"
                  android:layout_height="match_parent"
-                 android:layout_marginTop="@dimen/activity_vertical_margin"
                  android:background="@color/colorBlack">
 
     <ImageView
@@ -52,8 +51,6 @@
         android:src="@drawable/icon_firebase"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/view_horizontal_margin_4"
-        android:layout_marginBottom="@dimen/button_margin"
         android:layout_marginStart="@dimen/paddingLeft_radioButton"
         android:layout_marginLeft="@dimen/paddingLeft_radioButton"
         android:layout_marginEnd="@dimen/view_horizontal_margin_30"
@@ -66,7 +63,6 @@
         android:layout_toRightOf="@+id/onlineIcon"
         android:layout_width="match_parent"
         android:layout_height="@dimen/tv_height"
-        android:layout_marginTop="@dimen/button_margin"
         android:textColor="@color/colorPlayerB"
         android:textSize="@dimen/text_size"
         android:text="@string/online"/>
@@ -86,8 +82,6 @@
         android:src="@drawable/icon_dialog"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/view_horizontal_margin_4"
-        android:layout_marginBottom="@dimen/button_margin"
         android:layout_marginStart="@dimen/paddingLeft_radioButton"
         android:layout_marginLeft="@dimen/paddingLeft_radioButton"
         android:layout_marginEnd="@dimen/view_horizontal_margin_30"
@@ -100,7 +94,6 @@
         android:layout_toRightOf="@+id/offlineIcon"
         android:layout_width="match_parent"
         android:layout_height="@dimen/tv_height"
-        android:layout_marginTop="@dimen/view_horizontal_margin_4"
         android:layout_marginBottom="@dimen/view_horizontal_margin_4"
         android:textColor="@color/colorPlayerB"
         android:textSize="@dimen/text_size"
@@ -115,13 +108,41 @@
         android:background="@color/colorHoldNewGame"/>
 
     <ImageView
-        android:id="@+id/exitIcon"
+        android:id="@+id/adsIcon"
         android:layout_below="@id/sep3"
+        android:src="@drawable/getep"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/paddingLeft_radioButton"
+        android:layout_marginLeft="@dimen/paddingLeft_radioButton"
+        android:layout_marginEnd="@dimen/view_horizontal_margin_30"
+        android:layout_marginRight="@dimen/view_horizontal_margin_30"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true" />
+    <TextView
+        android:id="@+id/adsText"
+        android:layout_below="@id/sep3"
+        android:layout_toRightOf="@+id/offlineIcon"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/tv_height"
+        android:textColor="@color/colorPlayerB"
+        android:textSize="@dimen/text_size"
+        android:text="@string/getEp"/>
+    <View
+        android:id="@+id/sep4"
+        android:layout_below="@id/adsIcon"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
+        android:layout_marginBottom="@dimen/activity_vertical_margin"
+        android:background="@color/colorHoldNewGame"/>
+
+    <ImageView
+        android:id="@+id/exitIcon"
+        android:layout_below="@id/sep4"
         android:src="@drawable/exit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/view_horizontal_margin_4"
-        android:layout_marginBottom="@dimen/button_margin"
         android:layout_marginStart="@dimen/paddingLeft_radioButton"
         android:layout_marginLeft="@dimen/paddingLeft_radioButton"
         android:layout_marginEnd="@dimen/view_horizontal_margin_30"
@@ -130,17 +151,15 @@
         android:layout_alignParentLeft="true" />
     <TextView
         android:id="@+id/exitText"
-        android:layout_below="@id/sep3"
+        android:layout_below="@id/sep4"
         android:layout_toRightOf="@+id/exitIcon"
         android:layout_width="match_parent"
         android:layout_height="@dimen/tv_height"
-        android:layout_marginTop="@dimen/view_horizontal_margin_4"
-        android:layout_marginBottom="@dimen/view_horizontal_margin_4"
         android:textColor="@color/colorPlayerB"
         android:textSize="@dimen/text_size"
         android:text="@string/appExit"/>
     <View
-        android:id="@+id/sep4"
+        android:id="@+id/sep5"
         android:layout_below="@id/exitIcon"
         android:layout_width="match_parent"
         android:layout_height="1dp"

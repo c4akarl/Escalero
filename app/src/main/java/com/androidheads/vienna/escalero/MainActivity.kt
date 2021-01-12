@@ -95,16 +95,20 @@ class MainActivity : Activity(), View.OnTouchListener {
         val adLoadCallback = object: RewardedAdLoadCallback() {
             override fun onRewardedAdLoaded() {
 
-//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdLoaded")
+//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdLoaded()")
 
             }
             override fun onRewardedAdFailedToLoad(errorCode: Int) {
 
-//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdFailedToLoad, errorCode: $errorCode")
+//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdFailedToLoad(), errorCode: $errorCode")
 
             }
         }
+
+//        Log.d(TAG, "loadRewardedVideoAd(), loadAd()")
+
         mRewardedAd.loadAd(AdRequest.Builder().build(), adLoadCallback)
+
     }
 
     private val position: String
@@ -354,8 +358,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     private lateinit var soundsMap: HashMap<Int, Int>
 
     private lateinit var mRewardedAd: RewardedAd
-    private var isInitAds = false
-    private var adsCount = 1
+    private var startAds = 0L
 
     //ONLINE - variables
     private var mGoogleSignInClient: GoogleSignInClient? = null
@@ -368,6 +371,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private var refMatch: DatabaseReference? = null
     private var refMatchListener: ValueEventListener? = null
+    private var showOnlineTime = 1             // 0 = non, 1 = show time
 
     private lateinit var myReceiver: BroadcastReceiver
 
@@ -396,7 +400,6 @@ class MainActivity : Activity(), View.OnTouchListener {
     private val mTimerQuickMatch = Timer("schedule", true)
 
     private var mIsSignIn: Boolean = false
-    private var mFinishApp: Boolean = false
     private var mIsVersionChecked: Boolean = false
     private var mIsContinueMatch: Boolean = false
     private var mCurrentLang: String? = null
@@ -650,13 +653,11 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                                    Log.i(TAG, "matchUpdateListener(), onlineAction: ${checkUpdateData.onlineAction}, myId: $mPlayerId, turnId: ${checkUpdateData.turnPlayerId}")
 
-                                        if (!mFinishApp) {
-                                            if (checkUpdateData.onlineAction!!.startsWith(ONLINE_START)) {
-                                                updateUserStatus(playerId = mPlayerId, playing = true, singleGame = ed.isSingleGame)
-                                            }
-                                            if (checkUpdateData.onlineAction!!.endsWith(PAUSED)) {
-                                                updateUserStatus(playerId = mPlayerId, playing = false, singleGame = ed.isSingleGame)
-                                            }
+                                        if (checkUpdateData.onlineAction!!.startsWith(ONLINE_START)) {
+                                            updateUserStatus(playerId = mPlayerId, playing = true, singleGame = ed.isSingleGame)
+                                        }
+                                        if (checkUpdateData.onlineAction!!.endsWith(PAUSED)) {
+                                            updateUserStatus(playerId = mPlayerId, playing = false, singleGame = ed.isSingleGame)
                                         }
 
                                         if (checkUpdateData.onlineAction == ONLINE_GAME_OVER) {
@@ -755,8 +756,8 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                    Log.i(TAG, "quickMatchUpdateListener(), userId: $userId")
 
+                    //??? java.lang.IllegalArgumentException
                     if (dialogQuickMatchInvitation.isShowing)
-                        //error 20200327 java.lang.IllegalArgumentException: at android.view.WindowManagerGlobal.findViewLocked (WindowManagerGlobal.java:534)
                         dialogQuickMatchInvitation.dismiss()
 
                     if (!prefs.getBoolean("playOnline", false)) {
@@ -862,6 +863,21 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private suspend fun getLeaderboardScores(): ArrayList<UserList> = suspendCoroutine { continuation ->
+
+        //karl!!! lbTime = true --> list: Player > 200 days not active
+        val lbTime = false
+
+        val timeCheck       =       17280000000     // 200 days
+        val timeCheckDay    =       86400000        // 1   day
+        var serverTimestamp = 0L
+
+        GlobalScope.launch(Dispatchers.Main) {
+            val defferedTimestamp = async { getTimestampFromServer() }
+            serverTimestamp = defferedTimestamp.await().toLong()
+            defferedTimestamp.cancel()
+        }
+        var cntTime = 0
+
         userListArray = ArrayList()
         var place = 0
         val ref = FirebaseDatabase.getInstance().getReference("leaderboard")
@@ -871,7 +887,13 @@ class MainActivity : Activity(), View.OnTouchListener {
         query.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
 
-//                Log.i(TAG, "getPlayerQueryArray(), isOnline: $isOnline, dataSnapshot.count: ${dataSnapshot.children.count()}")
+                if (lbTime) {
+
+                    Log.i(TAG, "getPlayerQueryArray(), dataSnapshot.count: ${dataSnapshot.children.count()}")
+                    Log.i(TAG, "Player > 200 days not active")
+                    Log.i(TAG, "----------------------------")
+
+                }
 
                 dataSnapshot.children.reversed().forEach {
                     val leaderboard = it.getValue(Leaderboard::class.java)!!
@@ -886,10 +908,27 @@ class MainActivity : Activity(), View.OnTouchListener {
                         lb.timestamp = leaderboard.timestamp!!
                         lb.iconImageUri = ""
                         userListArray.add(lb)
+
+                        if (lbTime && leaderboard.score!! > 15L && serverTimestamp != 0L && serverTimestamp - lb.timestamp > timeCheck) {
+                            cntTime++
+
+                            val d = (serverTimestamp - lb.timestamp) / timeCheckDay
+
+                            Log.i(TAG, "${leaderboard.uid}, ${leaderboard.name}: ${leaderboard.score}, $d")
+
+                        }
+
                     }
 
+                }
+
+                if (lbTime) {
+
+                    Log.i(TAG, "----------------------------")
+                    Log.i(TAG, "Player > 200 days: $cntTime")
 
                 }
+
                 try {
                     continuation.resume(userListArray)
                 } catch (e: IllegalStateException) {
@@ -1183,7 +1222,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                             lb.iconImageUri = userData.iconImageUri ?: ""
                             if (!isOnline) {
-                                if (showOnlineTime == 1) {
+                                if (BuildConfig.DEBUG && showOnlineTime == 1) {
                                     if (timeInHours == 0L)
                                         lb.info = "${timeInMinutes}m"
                                     else {
@@ -1196,7 +1235,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                                 userListArray.add(lb)
                             } else {
                                 if (userData.online == true && timeInHours == 0L) {
-                                    if (showOnlineTime == 1)
+                                    if (BuildConfig.DEBUG && showOnlineTime == 1)
                                         lb.info = "${timeInMinutes}m"
                                     userListArray.add(lb)
                                 }
@@ -1328,21 +1367,13 @@ class MainActivity : Activity(), View.OnTouchListener {
         mAuthFirebase = FirebaseAuth.getInstance()
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
 
-        if (!isInitAds) {
-            isInitAds = true
-
-//            mRewardedAd = RewardedAd(this, resources.getString(R.string.adMobVideoId))
-
-            mRewardedAd = if (BuildConfig.DEBUG)
-                RewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
-            else
-                RewardedAd(this, resources.getString(R.string.adMobVideoId))
-
-            //karl
-            if (adsCount <= 0)
-                loadRewardedVideoAd()
-
+        mRewardedAd = if (BuildConfig.DEBUG) {
+            RewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
         }
+        else {
+            RewardedAd(this, resources.getString(R.string.adMobVideoId))
+        }
+        loadRewardedVideoAd()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mSoundPool = SoundPool.Builder()
@@ -1583,8 +1614,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     override fun onBackPressed() {
-        mFinishApp = true
-        finishApp(true)
+        showMainDialog()
     }
 
     override fun onDestroy() {
@@ -2976,7 +3006,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         val menuCurrentMatch = 2
         val menuSettings = 3
         val menuInformation = 4
-        val menuOffline = 5
+        val menuAdvertising = 5
+        val menuOffline = 6
         val builderMenu = AlertDialog.Builder(this)
         builderMenu.setIcon(R.drawable.icon_dialog)
         builderMenu.setTitle(resources.getString(R.string.escaleroOnline))
@@ -2995,7 +3026,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         actions.add(menuSettings)
         arrayAdapter.add(resources.getString(R.string.info))
         actions.add(menuInformation)
-                arrayAdapter.add(">> ${resources.getString(R.string.offline)}")
+        arrayAdapter.add(resources.getString(R.string.getEp))
+        actions.add(menuAdvertising)
+        arrayAdapter.add(">> ${resources.getString(R.string.offline)}")
         actions.add(menuOffline)
         builderMenu.setAdapter(
                 arrayAdapter
@@ -3023,6 +3056,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                 menuInformation -> {
                     showInfoMenu()
                 }
+                menuAdvertising -> {
+                    showAds()
+                }
                 menuOffline -> {
                     playOffline(true)
                 }
@@ -3037,7 +3073,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         val menuLoadGame = 2
         val menuSettings = 3
         val menuInformation = 4
-        val menuOnline = 5
+        val menuAdvertising = 5
+        val menuOnline = 6
         val builderMenu = AlertDialog.Builder(this)
         builderMenu.setIcon(R.drawable.icon_dialog)
         builderMenu.setTitle(resources.getString(R.string.escaleroOffline))
@@ -3055,6 +3092,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         actions.add(menuSettings)
         arrayAdapter.add(resources.getString(R.string.info))
         actions.add(menuInformation)
+        arrayAdapter.add(resources.getString(R.string.getEp))
+        actions.add(menuAdvertising)
         arrayAdapter.add(">> ${resources.getString(R.string.online)}")
         actions.add(menuOnline)
         builderMenu.setAdapter(
@@ -3082,8 +3121,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                     preferencesIntent = Intent(this, Preferences::class.java)
                     startActivityForResult(preferencesIntent, PREFERENCES_REQUEST_CODE)
                 }
-                menuInformation -> showInfoMenu()
-                menuOnline -> playOnline(false)
+                menuInformation -> { showInfoMenu() }
+                menuAdvertising -> { showAds() }
+                menuOnline -> { playOnline(false) }
             }
         }
         builderMenu.show()
@@ -4242,9 +4282,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         edi.putString("diceText", ed.diceText)                     // canceled
         edi.putString("diceTextDouble1", ed.diceTextDouble1)       // canceled
 
-        edi.putInt("adsCount", adsCount)
-
         edi.apply()
+
     }
 
     private fun getRunPrefs() {
@@ -4312,8 +4351,6 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         selectedCol = runPrefs.getInt("selectedCol", selectedCol)
         selectedRow = runPrefs.getInt("selectedRow", selectedRow)
-
-        adsCount = runPrefs.getInt("adsCount", 1)
 
     }
 
@@ -4940,6 +4977,43 @@ class MainActivity : Activity(), View.OnTouchListener {
         return res
     }
 
+    private fun showMainDialog() {
+        dialogMain.setCancelable(true)
+        dialogMain.onlineIcon.setOnClickListener {
+            playOnline(false)
+            dialogMain.dismiss()
+        }
+        dialogMain.onlineText.setOnClickListener {
+            playOnline(false)
+            dialogMain.dismiss()
+        }
+        dialogMain.offlineIcon.setOnClickListener {
+            playOffline(true)
+            dialogMain.dismiss()
+        }
+        dialogMain.offlineText.setOnClickListener {
+            playOffline(true)
+            dialogMain.dismiss()
+        }
+        dialogMain.adsIcon.setOnClickListener {
+            showAds()
+        }
+        dialogMain.adsText.setOnClickListener {
+            showAds()
+        }
+        dialogMain.exitIcon.setOnClickListener {
+            dialogMain.dismiss()
+            finishApp(true)
+        }
+        dialogMain.exitText.setOnClickListener {
+            dialogMain.dismiss()
+            finishApp(true)
+        }
+
+        if (!dialogMain.isShowing && !isFinishing)
+            dialogMain.show()
+    }
+
     private fun playOnline(isAppStart: Boolean) {
         if (engineIsRunning) {
             Toast.makeText(applicationContext, getString(R.string.isStopped), Toast.LENGTH_SHORT).show()
@@ -5029,48 +5103,43 @@ class MainActivity : Activity(), View.OnTouchListener {
                             ed.putLong("adsDelay", timeStamp)
                             ed.apply()
 
-                            if (adsCount > MAX_ADS_COUNT)
-                                adsCount = MAX_ADS_COUNT
+//                            Log.d(TAG, "showAds(), onRewardedAdClosed()")
 
-                            finishAfterAds()
+//                            loadRewardedVideoAd()
 
                         }
                         override fun onUserEarnedReward(p0: com.google.android.gms.ads.rewarded.RewardItem) {
 
-                            adsCount = p0.amount
+                            if (mPlayerId != null && p0.amount > 0) {
+                                var getEp = ((System.currentTimeMillis() - startAds) / DELAY_TIME_ADS_EP) + ADS_EP_MIN
+                                if (getEp > ADS_EP_MAX)
+                                    getEp = ADS_EP_MAX
+                                val sum = mPlayerEp + getEp
+
+//                                Log.d(TAG, "showAds(), mPlayerEp: $mPlayerEp, getEp: $getEp")
+
+                                val newEp = "${getString(R.string.escaleroPoints)}:\n\n$mPlayerEp + $getEp = $sum EP"
+                                showInfoDialog(getString(R.string.info), newEp, getString(R.string.ok))
+                                updatePlayerEp(mPlayerId!!, getEp)
+
+                            }
 
                         }
                         override fun onRewardedAdFailedToShow(errorCode: Int) {
 
-                            finishAfterAds()
-
                         }
                     }
+
+                    startAds = System.currentTimeMillis()
 
                     mRewardedAd.show(activityContext, adCallback)
 
                 }
-                else
-                    finishAfterAds()
 
             }
             else
-                finishAfterAds()
+                Toast.makeText(applicationContext, getString(R.string.currentlyNoAds), Toast.LENGTH_LONG).show()
         }
-        else
-            finishAfterAds()
-
-    }
-
-    private fun finishAfterAds() {
-
-//        Log.d(TAG, "finishAfterAds(), adsCount: $adsCount")
-
-        adsCount--
-        val edi = runPrefs.edit()
-        edi.putInt("adsCount", adsCount)
-        edi.apply()
-        finish()
 
     }
 
@@ -5290,16 +5359,12 @@ class MainActivity : Activity(), View.OnTouchListener {
                 dialogInfo.dismiss()
             if (dialogCurrentMatch.isShowing)
                 dialogCurrentMatch.dismiss()
-            if (mFinishApp)
-                finishApp(false)
         }
         dialogInfo.messageAction.setOnClickListener {
             if (dialogInfo.isShowing)
                 dialogInfo.dismiss()
             if (dialogCurrentMatch.isShowing)
                 dialogCurrentMatch.dismiss()
-            if (mFinishApp)
-                finishApp(false)
         }
 
         if (!isFinishing)
@@ -5451,6 +5516,25 @@ class MainActivity : Activity(), View.OnTouchListener {
         dialogTwoBtn.action2.setOnClickListener {
             dialogTwoBtn.dismiss()
             finishApp(false)
+        }
+        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
+        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+        if (!isFinishing)
+            dialogTwoBtn.show()
+    }
+
+    private fun showNoEpDialog() {
+        dialogTwoBtn.mes2Title.text = getString(R.string.warningTitle)
+        dialogTwoBtn.mes2.text = getString(R.string.noEp)
+        dialogTwoBtn.action1.text = getString(R.string.noThanks)
+        dialogTwoBtn.action2.text = getString(R.string.getEp)
+        dialogTwoBtn.setCancelable(true)
+        dialogTwoBtn.action1.setOnClickListener {
+            dialogTwoBtn.dismiss()
+        }
+        dialogTwoBtn.action2.setOnClickListener {
+            dialogTwoBtn.dismiss()
+            showAds()
         }
         dialogTwoBtn.action1.visibility = ImageView.VISIBLE
         dialogTwoBtn.action2.visibility = ImageView.VISIBLE
@@ -5689,32 +5773,21 @@ class MainActivity : Activity(), View.OnTouchListener {
     @SuppressLint("SetTextI18n")
     private fun showRematchDialog(isRematch: Boolean, rmPlayerA: String, rmPlayerB: String, playerEpA: Long, playerEpB: Long, playerResultA: Long, playerResultB: Long, result: Long) {
 
-        // add -1 EP fee
-        var matchResult = result
-        var matchA = playerResultA
-        var matchB = playerResultB
-        if (matchResult < 0)
-            matchResult--
-        if (matchA < 0)
-            matchA--
-        if (matchB < 0)
-            matchB--
-
 //        Log.d(TAG, "showRematchDialog(), isRematch: $isRematch, A: $rmPlayerA, B: $rmPlayerB, " +
 //                "playerEpA: $playerEpA, playerEpB: $playerEpB, playerResultA: $matchA, playerResultB: $matchB")
 
         updateUserStatus(playerId = mPlayerId, playing = false, singleGame = ed.isSingleGame)
 
         if (mPlayerId != null)
-            updatePlayerEp(mPlayerId!!, matchResult)
+            updatePlayerEp(mPlayerId!!, result)
 
         dialogRematch.playerNames.text = "$rmPlayerA - $rmPlayerB"
         dialogRematch.playerResult.text = ed.playerResult
 
-        var newA = playerEpA + matchA
+        var newA = playerEpA + playerResultA
         if (newA < 0L)
             newA = 0L
-        var newB = playerEpB + matchB
+        var newB = playerEpB + playerResultB
         if (newB < 0L)
             newB = 0L
 
@@ -5731,18 +5804,18 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         dialogRematch.playerNameA.text = "$rmPlayerA:"
         dialogRematch.playerEpOldA.text = "$playerEpA"
-        if (matchA > 0L)
-            dialogRematch.playerResultA.text = "+$matchA"
+        if (playerResultA > 0L)
+            dialogRematch.playerResultA.text = "+$playerResultA"
         else
-            dialogRematch.playerResultA.text = "$matchA"
+            dialogRematch.playerResultA.text = "$playerResultA"
         dialogRematch.playerEpNewA.text = "$newA EP"
 
         dialogRematch.playerNameB.text = "$rmPlayerB:"
         dialogRematch.playerEpOldB.text = "$playerEpB"
-        if (matchB > 0L)
-            dialogRematch.playerResultB.text = "+$matchB"
+        if (playerResultB > 0L)
+            dialogRematch.playerResultB.text = "+$playerResultB"
         else
-            dialogRematch.playerResultB.text = "$matchB"
+            dialogRematch.playerResultB.text = "$playerResultB"
         dialogRematch.playerEpNewB.text = "$newB EP"
 
         dialogRematch.setOnCancelListener {
@@ -5992,11 +6065,14 @@ class MainActivity : Activity(), View.OnTouchListener {
     //ONLINE - methods, general
     private fun showPlayOnlineDialog() {
 
-//        Log.d(TAG, "1 showPlayOnlineDialog()")
+//        Log.d(TAG, "1 showPlayOnlineDialog(), mIsSignIn: $mIsSignIn, mPlayerEp: $mPlayerEp")
 
         if (!checkConnectivity(false))
             return
-
+        if (mIsSignIn && mPlayerEp == 0L) {
+            showNoEpDialog()
+            return
+        }
 
         GlobalScope.launch(Dispatchers.Main) {
 
@@ -6151,7 +6227,9 @@ class MainActivity : Activity(), View.OnTouchListener {
             else
                 dialogPlayOnline.escaleroPoints.text = epPrefs
 
-            if (!dialogPlayOnline.isShowing)
+            //android.view.WindowManager$BadTokenException
+//            if (!dialogPlayOnline.isShowing)
+            if (!dialogPlayOnline.isShowing && !isFinishing)
                 dialogPlayOnline.show()
 
         }
@@ -6719,9 +6797,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     //ONLINE - methods, signing
     private fun checkConnectivity(isSignOut: Boolean): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val isConnected: Boolean
-
-        isConnected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val isConnected: Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val nw      = connectivityManager.activeNetwork ?: return false
             val actNw = connectivityManager.getNetworkCapabilities(nw) ?: return false
             when {
@@ -7170,11 +7246,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (isFinishApp) {
                     setAppStart(true)
                     setRunPrefs()
-                    if (adsCount <= 0)
-                        showAds()
-                    else {
-                        finishAfterAds()
-                    }
+                    finish()
+
                 }
 
             }
@@ -7182,11 +7255,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (isFinishApp) {
                     setAppStart(true)
                     setRunPrefs()
-                    if (adsCount <= 0)
-                        showAds()
-                    else {
-                        finishAfterAds()
-                    }
+                    finish()
+
                 }
             }
         }
@@ -7601,7 +7671,10 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
 
             ONLINE_REMATCH_TURN -> {
-                showAcceptRematchDialog(false, mMatchBaseData!!.nameA!!, mMatchBaseData!!.nameB!!)
+                //kotlin.KotlinNullPointerException
+                if (mMatchBaseData != null) {
+                    showAcceptRematchDialog(false, mMatchBaseData!!.nameA!!, mMatchBaseData!!.nameB!!)
+                }
             }
 
             ONLINE_START_REMATCH -> {
@@ -7700,13 +7773,16 @@ class MainActivity : Activity(), View.OnTouchListener {
                     isRematchAccepted = false
                     matchDataToDb(true, ONLINE_START_REMATCH)
                 } else {
-                    var playerA = mPlayerName!!
-                    var playerB = mOponentName!!
-                    if (mPlayerABC == "B") {
-                        playerA = mOponentName!!
-                        playerB = mPlayerName!!
+                    //kotlin.KotlinNullPointerException
+                    if (mPlayerName != null && mOponentName != null) {
+                        var playerA = mPlayerName!!
+                        var playerB = mOponentName!!
+                        if (mPlayerABC == "B") {
+                            playerA = mOponentName!!
+                            playerB = mPlayerName!!
+                        }
+                        showAcceptRematchDialog(true, playerA, playerB)
                     }
-                    showAcceptRematchDialog(true, playerA, playerB)
                 }
             }
 
@@ -8070,6 +8146,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (timestampStr.isEmpty() || serverTimestampStr.isEmpty())
                     return@launch
 
+                //java.lang.NumberFormatException
                 val timestamp = timestampStr.toLong()
                 val serverTimestamp = serverTimestampStr.toLong()
                 val diffTime = timestamp - mTimestampPre
@@ -8474,6 +8551,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         const val DELAY_TIME = 100
         const val DELAY_TIME_DICE_BOARD = 400
+        const val DELAY_TIME_ADS_EP = 3000     // 10 sec
         const val ANIMATE_TIME = 400
         const val FIRST_ANIMATE_TIME = 1000
 
@@ -8502,22 +8580,19 @@ class MainActivity : Activity(), View.OnTouchListener {
         const val ONLINE_MAX_USER_MATCHES = 50
 
         const val NOTIFICATION_DELAY = 15000L
-        const val ADS_DELAY = 60000L           // 1   min
+        const val ADS_DELAY = 600000L           // 10   min
         const val QUICK_MATCH_DELAY = 180000L   // 3    min
         const val RECONNECT_TIME = 180000L      // 3    min
         const val MIN_UPDATE_TIME = 400L        // mil sec
-//        const val MATCH_TIMEOUT = 600000L       // 10    min
         const val MATCH_TIMEOUT = 300000L       // 5    min
         const val MIN_BTN_DELAY = 300L
+
+        const val ADS_EP_MIN = 3L
+        const val ADS_EP_MAX = 10L
 
         const val RC_SIGN_IN = 10001
         const val MIN_VERSION_CODE = 55
 
-        const val MAX_ADS_COUNT = 5
-
     }
-
-    // special controls (TEST)
-    private var showOnlineTime = 0             // 0 = non, 1 = show time, 2 = [= > >> >>>]
 
 }

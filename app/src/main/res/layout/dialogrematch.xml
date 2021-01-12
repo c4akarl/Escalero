@@ -179,25 +179,13 @@
     </LinearLayout>
 
     <TextView
-        android:id="@+id/matchFee"
+        android:id="@+id/rematchInfo"
         android:layout_below="@id/playerB"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="@dimen/margin_1"
-        android:layout_marginBottom="@dimen/margin_1"
-        android:textColor="@color/colorPlayerB"
-        android:textSize="@dimen/text_size_16"
-        android:text="@string/matchFee" />
-
-    <TextView
-        android:id="@+id/rematchInfo"
-        android:layout_below="@id/matchFee"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="@dimen/activity_vertical_margin"
-        android:layout_marginBottom="@dimen/activity_vertical_margin"
+        android:layout_marginTop="@dimen/paddingLeft_radioButton"
+        android:layout_marginBottom="@dimen/paddingLeft_radioButton"
         android:textColor="@color/colorPlayerB"
         android:textSize="@dimen/text_size_16"
         android:text="@string/rematch" />

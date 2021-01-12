@@ -214,8 +214,8 @@ class TableView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         if (ed.isGameOver)
             paint.color = Color.BLACK
         // text (result)
-        val tf = Typeface.createFromAsset(context.assets, "fonts/HandWritten.ttf")
-        paint.typeface = tf
+//        val tf = Typeface.createFromAsset(context.assets, "fonts/HandWritten.ttf")
+//        paint.typeface = tf
         val ch = cellCanvas.height
         val ts = (ch * 0.6f).toInt()
         paint.textSize = ts.toFloat()
