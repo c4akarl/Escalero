@@ -1,6 +1,6 @@
 /*
     Escalero - An Android dice program.
-    Copyright (C) 2016-2020  Karl Schreiner, c4akarl@gmail.com
+    Copyright (C) 2016-2021  Karl Schreiner, c4akarl@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,21 +18,18 @@
 
 package com.androidheads.vienna.escalero
 
-import android.annotation.SuppressLint
 import android.content.Intent
+import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
-@SuppressLint("MissingFirebaseInstanceTokenRefresh")
 class FCMService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        super.onMessageReceived(remoteMessage)
 
-//        Log.d(TAG, "1 onMessageReceived(), remoteMessage.from: ${remoteMessage.from}")
+//        Log.d(TAG, "1 onMessageReceived()")
 
-        // Check if message contains a data payload.
         remoteMessage.data.isNotEmpty().let {
 
 //            Log.d(TAG, "2 onMessageReceived(), remoteMessage.data: ${remoteMessage.data}")
@@ -41,31 +38,19 @@ class FCMService : FirebaseMessagingService() {
 
         }
 
-        // Check if message contains a notification payload.
-//        if (remoteMessage.notification != null) {
-//
-////            Log.d(TAG, "3 onMessageReceived(), remoteMessage.notification!!.body!!: ${remoteMessage.notification!!.body!!}")
-//
-//        }
-
         remoteMessage.notification?.let {
 
 //            Log.d(TAG, "4 onMessageReceived(), sendNotification(), it.body!!: ${it.body!!}")
 
-//            sendNotification(it.body!!)
-
         }
 
-        // Also if you intend on generating your own notifications as a result of a received FCM
-        // message, here is where that should be initiated. See sendNotification method below.
     }
 
-//    override fun onNewToken(token: String) {
-//        super.onNewToken(token)
-//
-//       sendRegistrationToServer(token)
-//
-//    }
+    override fun onNewToken(token: String) {
+
+//        Log.d(TAG, "onNewToken(), token: $token")
+
+    }
 
     private fun notifyMainActivity(remoteMessage: RemoteMessage) {
         val intent = Intent()
@@ -82,14 +67,6 @@ class FCMService : FirebaseMessagingService() {
         intent.putExtra("timestamp", remoteMessage.data["timestamp"])
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
-
-//    private fun sendRegistrationToServer(token: String?) {
-//
-//        Log.d(TAG, "sendRegistrationToServer(), token: $token")
-//
-//        to users/$userId/token  ???
-//
-//    }
 
     companion object {
 

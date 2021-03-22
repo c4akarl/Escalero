@@ -1,6 +1,6 @@
 /*
     Escalero - An Android dice program.
-    Copyright (C) 2016-2020  Karl Schreiner, c4akarl@gmail.com
+    Copyright (C) 2016-2021  Karl Schreiner, c4akarl@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -175,6 +175,7 @@ class BoardView(context: Context, attrs: AttributeSet) : View(context, attrs) {
     fun updateBoard(roll: IntArray, hold: IntArray, double1: IntArray,
                     isSelectable: Boolean, doubleState: Int, initRollValues: Boolean) {
 
+//        Log.i(TAG, "updateBoard(), roll: $roll, hold: $hold, double1: $double1")
 //        Log.i(TAG, "updateBoard(), mBoardWidth: $mBoardWidth, mBoardHeight: $mBoardHeight, initRollValues: $initRollValues")
 //        Log.i(TAG, "updateBoard(), doubleState: $doubleState, double1.size: ${double1.size}")
 
@@ -460,7 +461,6 @@ class BoardView(context: Context, attrs: AttributeSet) : View(context, attrs) {
             controlValues[2][5] = mDiceSize * 60 / 100   // 60 % of dice tableHeight
             controlValues[2][6] = 0
         }
-//        if (!isSingle and (playerInfoDouble != "")) {
         if (!isSingle) {
 
 //            Log.i(TAG, "setControlValues(), [3]")
@@ -562,11 +562,9 @@ class BoardView(context: Context, attrs: AttributeSet) : View(context, attrs) {
             if (!mIsSingle)
                 gameType = resources.getString(R.string.typeDouble)
             val game = "$gameType ($mColValues)"
-//            mPaint!!.getTextBounds(mColValues, 0, mColValues!!.length, bounds)
             mPaint!!.getTextBounds(game, 0, game.length, bounds)
             x = mBoardWidth / 2 - bounds.width() / 2
             y = mBoardHeight / 2 - bounds.height() / 2 + (mDiceSize * 0.6f).toInt() + (mDiceSize * 0.6f).toInt()
-//            canvas.drawText(mColValues!!, x.toFloat(), y.toFloat(), mPaint!!)
             canvas.drawText(game, x.toFloat(), y.toFloat(), mPaint!!)
 
             if (mOnlinePlayers.isNotEmpty()) {
@@ -764,7 +762,7 @@ class BoardView(context: Context, attrs: AttributeSet) : View(context, attrs) {
     }
 
     companion object {
-        const val TAG = "BoardView"
+//        const val TAG = "BoardView"
         const val SIZE1_SMALL = 8
         const val SIZE1_MEDIUM = 7
         const val SIZE1_LARGE = 6

@@ -1,6 +1,6 @@
 /*
     Escalero - An Android dice program.
-    Copyright (C) 2016-2020  Karl Schreiner, c4akarl@gmail.com
+    Copyright (C) 2016-2021  Karl Schreiner, c4akarl@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -30,11 +30,8 @@ import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.RadioButton
+import android.widget.*
 import androidx.core.content.ContextCompat
-import kotlinx.android.synthetic.main.new_game.*
 import java.util.*
 
 class NewGame : Activity() {
@@ -79,6 +76,27 @@ class NewGame : Activity() {
     private lateinit var runPrefs: SharedPreferences
     private lateinit var llPlayerC: LinearLayout
 
+    private lateinit var btnChange: TextView
+    private lateinit var btnRandom: TextView
+    private lateinit var btnOk: ImageView
+    private lateinit var btnHumanA: ImageView
+    private lateinit var btnMobileA: ImageView
+    private lateinit var nameA: EditText
+    private lateinit var btnStartA: ImageView
+    private lateinit var btnHumanB: ImageView
+    private lateinit var btnMobileB: ImageView
+    private lateinit var nameB: EditText
+    private lateinit var btnStartB: ImageView
+    private lateinit var btnHumanC: ImageView
+    private lateinit var btnMobileC: ImageView
+    private lateinit var nameC: EditText
+    private lateinit var btnStartC: ImageView
+    private lateinit var rbSingle: RadioButton
+    private lateinit var rbDouble: RadioButton
+    private lateinit var rbPlayers2: RadioButton
+    private lateinit var rbPlayers3: RadioButton
+    private lateinit var playerMessage: TextView
+
     private var isSingleGame = true
     internal var players = 2
     private var enginePlayer = false
@@ -99,6 +117,27 @@ class NewGame : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.new_game)
+        btnChange = findViewById<View>(R.id.btnChange) as TextView
+        btnRandom = findViewById<View>(R.id.btnRandom) as TextView
+        btnOk = findViewById<View>(R.id.btnOk) as ImageView
+        btnHumanA = findViewById<View>(R.id.btnHumanA) as ImageView
+        btnMobileA = findViewById<View>(R.id.btnMobileA) as ImageView
+        nameA = findViewById<View>(R.id.nameA) as EditText
+        btnStartA = findViewById<View>(R.id.btnStartA) as ImageView
+        btnHumanB = findViewById<View>(R.id.btnHumanB) as ImageView
+        btnMobileB = findViewById<View>(R.id.btnMobileB) as ImageView
+        nameB = findViewById<View>(R.id.nameB) as EditText
+        btnStartB = findViewById<View>(R.id.btnStartB) as ImageView
+        btnHumanC = findViewById<View>(R.id.btnHumanC) as ImageView
+        btnMobileC = findViewById<View>(R.id.btnMobileC) as ImageView
+        nameC = findViewById<View>(R.id.nameC) as EditText
+        btnStartC = findViewById<View>(R.id.btnStartC) as ImageView
+        rbSingle = findViewById<View>(R.id.rb_single) as RadioButton
+        rbDouble = findViewById<View>(R.id.rb_double) as RadioButton
+        rbPlayers2 = findViewById<View>(R.id.rb_players2) as RadioButton
+        rbPlayers3 = findViewById<View>(R.id.rb_players3) as RadioButton
+        playerMessage = findViewById<View>(R.id.playerMessage) as TextView
+
         runPrefs = getSharedPreferences("run", 0)
         prefs = getSharedPreferences("prefs", 0)
         players = prefs.getInt("players", 2)
@@ -162,44 +201,44 @@ class NewGame : Activity() {
 
     fun onRadioButtonClicked(view: View) {
         val checked = view as RadioButton
-        if (rb_single == checked)         { setSingleDouble(true) }
-        if (rb_double == checked)         { setSingleDouble(false) }
-        if (rb_players2 == checked)         { setPlayerNumber(2) }
-        if (rb_players3 == checked)         { setPlayerNumber(3) }
+        if (rbSingle == checked)         { setSingleDouble(true) }
+        if (rbDouble == checked)         { setSingleDouble(false) }
+        if (rbPlayers2 == checked)         { setPlayerNumber(2) }
+        if (rbPlayers3 == checked)         { setPlayerNumber(3) }
     }
 
     private fun setSingleDouble(isSingle: Boolean) {
         isSingleGame = isSingle
         if (isSingleGame) {
-            rb_single.isChecked = true
-            rb_players2.text = getString(R.string.playerNumber, 2)
-            rb_players3.text = getString(R.string.playerNumber, 3)
+            rbSingle.isChecked = true
+            rbPlayers2.text = getString(R.string.playerNumber, 2)
+            rbPlayers3.text = getString(R.string.playerNumber, 3)
         } else {
-            rb_double.isChecked = true
-            rb_players2.text = getString(R.string.team, 2)
-            rb_players3.text = getString(R.string.team, 3)
+            rbDouble.isChecked = true
+            rbPlayers2.text = getString(R.string.team, 2)
+            rbPlayers3.text = getString(R.string.team, 3)
         }
     }
 
     private fun setPlayerNumber(player: Int) {
         players = player
         if (players == 2) {
-            rb_players2.isChecked = true
+            rbPlayers2.isChecked = true
             llPlayerC.visibility = LinearLayout.INVISIBLE
             if (playerStart == 'C')
                 setPlayerStart('?')
         }
         if (players == 3) {
-            rb_players3.isChecked = true
+            rbPlayers3.isChecked = true
             llPlayerC.visibility = LinearLayout.VISIBLE
         }
         if (isSingleGame) {
-            rb_players2.text = getString(R.string.playerCnt, 2)
-            rb_players3.text = getString(R.string.playerCnt, 3)
+            rbPlayers2.text = getString(R.string.playerCnt, 2)
+            rbPlayers3.text = getString(R.string.playerCnt, 3)
         }
         else {
-            rb_players2.text = getString(R.string.team, 2)
-            rb_players3.text = getString(R.string.team, 3)
+            rbPlayers2.text = getString(R.string.team, 2)
+            rbPlayers3.text = getString(R.string.team, 3)
         }
     }
 

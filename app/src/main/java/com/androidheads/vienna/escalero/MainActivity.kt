@@ -1,6 +1,6 @@
 /*
     Escalero - An Android dice program.
-    Copyright (C) 2016-2020 Karl Schreiner, c4akarl@gmail.com
+    Copyright (C) 2016-2021 Karl Schreiner, c4akarl@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,8 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-@file:Suppress("DEPRECATION")
 
 package com.androidheads.vienna.escalero
 
@@ -36,14 +34,12 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
-import android.view.Gravity
-import android.view.MotionEvent
-import android.view.View
-import android.view.Window
+import android.view.*
 import android.widget.*
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
@@ -51,9 +47,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.androidheads.vienna.engine.Engine
+import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardedAd
-import com.google.android.gms.ads.rewarded.RewardedAdCallback
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.auth.api.Auth
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -64,20 +62,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.database.*
-import com.google.firebase.iid.FirebaseInstanceId
-import kotlinx.android.synthetic.main.dialogcurrentmatch.*
-import kotlinx.android.synthetic.main.dialoginfo.*
-import kotlinx.android.synthetic.main.dialogmain.*
-import kotlinx.android.synthetic.main.dialogmatch.*
-import kotlinx.android.synthetic.main.dialogplayername.*
-import kotlinx.android.synthetic.main.dialogplayerquery.*
-import kotlinx.android.synthetic.main.dialogplayonline.*
-import kotlinx.android.synthetic.main.dialogrematch.*
-import kotlinx.android.synthetic.main.dialogrewardbonus.*
-import kotlinx.android.synthetic.main.dialogtwobtn.action1
-import kotlinx.android.synthetic.main.dialogtwobtn.action2
-import kotlinx.android.synthetic.main.dialogtwobtn.mes2
-import kotlinx.android.synthetic.main.dialogtwobtn.mes2Title
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -92,24 +77,30 @@ import kotlin.coroutines.suspendCoroutine
 class MainActivity : Activity(), View.OnTouchListener {
 
     private fun loadRewardedVideoAd() {
-        val adLoadCallback = object: RewardedAdLoadCallback() {
-            override fun onRewardedAdLoaded() {
 
-//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdLoaded()")
+        var adsId = resources.getString(R.string.adMobVideoId)
+        if (BuildConfig.DEBUG)
+            adsId = "ca-app-pub-3940256099942544/5224354917"
+        val adRequest = AdRequest.Builder().build()
 
+        RewardedAd.load(this,adsId, adRequest, object : RewardedAdLoadCallback() {
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+
+//                Log.d(TAG, "loadRewardedVideoAd(), onAdFailedToLoad(), error: $adError?.message")
+
+                mRewardedAd = null
             }
-            override fun onRewardedAdFailedToLoad(errorCode: Int) {
 
-//                Log.d(TAG, "loadRewardedVideoAd(), onRewardedAdFailedToLoad(), errorCode: $errorCode")
+            override fun onAdLoaded(rewardedAd: RewardedAd) {
 
+//                Log.d(TAG, "loadRewardedVideoAd(), onAdLoaded()")
+
+                mRewardedAd = rewardedAd
             }
-        }
-
-//        Log.d(TAG, "loadRewardedVideoAd(), loadAd()")
-
-        mRewardedAd.loadAd(AdRequest.Builder().build(), adLoadCallback)
+        })
 
     }
+
 
     private val position: String
         get() {
@@ -180,7 +171,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                                         d = Character.getNumericValue(dbl[j])
                                     diceDouble1[j] = d
                                 }
-                                diceModus = 1
+                                diceMode = 1
                                 isDouble1 = false
                                 setBtnPlayer(ed.playerToMove)
                                 diceView(diceRoll, diceHold)
@@ -203,7 +194,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                         if (!isOnlineActive)
                             ed.setPlayerToMove(getEngineName(isEnginePlayer(ed.nextPlayerToMove)))
 
-                        diceModus =
+                        diceMode =
                             if (isEnginePlayer(ed.playerToMove))
                                 1
                             else
@@ -216,7 +207,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                             if (isDiceBoard)
                                 setToPrev()
                             if (isEnginePlayer(ed.playerToMove)) {
-                                diceModus = 1
+                                diceMode = 1
                                 isDouble1 = true
                                 diceView(diceRoll, diceHold)
                                 handlerEngine.removeCallbacks(this)
@@ -231,7 +222,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                                     isDicing = false
                                 }
                             } else {
-                                diceModus = 5
+                                diceMode = 5
                                 if (isDiceBoard) {
                                     diceView(diceRoll, diceHold)
                                     animationDiceBoard(false)
@@ -295,7 +286,6 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var isInitDelay = false
     private lateinit var preferencesIntent: Intent
     private lateinit var newGameIntent: Intent
-    private lateinit var fileManagerIntent: Intent
     private lateinit var infoIntent: Intent
     private var notificationIntent: Intent? = null
     private var notificationNoDialog = false
@@ -320,14 +310,14 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var displayDensity = 1.0f
     private val rand = Random()
 
-    private var flipModus = 0  // 0=no flip action, 1=ready for flip(touch button: btnDice), 2=is flipped(touch button: btnCancel for reflip)
+    private var flipMode = 0  // 0=no flip action, 1=ready for flip(touch button: btnDice), 2=is flipped(touch button: btnCancel)
 
-    internal var diceModus = 0  // 0=new game, 1=first try, 2=second try, 3=third try, 4=enter result, 5=cancel result, 8=confirm result(online)
+    internal var diceMode = 0  // 0=new game, 1=first try, 2=second try, 3=third try, 4=enter result, 5=cancel result, 8=confirm result(online)
     internal var diceRoll = IntArray(5)
     internal var diceHold = IntArray(5)
     private var diceDouble1 = IntArray(5)
-    private var diceModusPrev = 0
-    private var diceModusCheckRoll = -1
+    private var diceModePrev = 0
+    private var diceModeCheckRoll = -1
     private var diceRollPrev = IntArray(5)
     private var diceHoldPrev = IntArray(5)
     private var diceValues = IntArray(6)
@@ -336,8 +326,8 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var dbHold = IntArray(5)              // [index from diceHold]
     private var dbRollValues = Array(5) { IntArray(3) }   // [index from diceRoll][x,y,rotation]
 
-    var handlerAnimationDices = Handler()
-    var handlerEngine = Handler()
+    var handlerAnimationDices = Handler(Looper.getMainLooper())
+    var handlerEngine = Handler(Looper.getMainLooper())
     internal var engineIsRunning = false
     internal var stopEngine = false
     private var startAnimationTime: Long = 0
@@ -357,7 +347,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var mSoundPool: SoundPool? = null
     private lateinit var soundsMap: HashMap<Int, Int>
 
-    private lateinit var mRewardedAd: RewardedAd
+    private var mRewardedAd: RewardedAd? = null
     private var startAds = 0L
 
     //ONLINE - variables
@@ -365,8 +355,8 @@ class MainActivity : Activity(), View.OnTouchListener {
     private lateinit var mAuthFirebase: FirebaseAuth
     private lateinit var firebaseAnalytics: FirebaseAnalytics
 
-    private lateinit var refQickMatch: DatabaseReference
-    private var refQickMatchListener: ValueEventListener? = null
+    private lateinit var refQuickMatch: DatabaseReference
+    private var refQuickMatchListener: ValueEventListener? = null
     private var quickMatchUpdateTime = 0L
 
     private var refMatch: DatabaseReference? = null
@@ -387,11 +377,11 @@ class MainActivity : Activity(), View.OnTouchListener {
     private var mPlayerEp = -1L      // Escalero Points
     private var mPlayerIconImageUri: String? = null
 
-    private var mOponentId: String? = null
-    private var mOponentABC: String? = null
-    private var mOponentName: String? = null
-    private var mOponentEp = -1L      // Escalero Points
-    private var mOponentAppVersionCode: Long? = null
+    private var mOpponentId: String? = null
+    private var mOpponentABC: String? = null
+    private var mOpponentName: String? = null
+    private var mOpponentEp = -1L      // Escalero Points
+    private var mOpponentAppVersionCode: Long? = null
 
     private var mMatchId: String? = null
     private var mMatchBaseData: MatchBaseData? = null
@@ -422,10 +412,9 @@ class MainActivity : Activity(), View.OnTouchListener {
     private lateinit var dialogTwoBtn: Dialog
     private lateinit var dialogQuickMatchInvitation: Dialog
     private lateinit var dialogRematch: Dialog
-    private lateinit var dialogRewardBonus: Dialog
 
     private fun appInForeground(context: Context): Boolean {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val runningAppProcesses = activityManager.runningAppProcesses ?: return false
         return runningAppProcesses.any { it.processName == context.packageName && it.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND }
     }
@@ -439,19 +428,18 @@ class MainActivity : Activity(), View.OnTouchListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val manager = packageManager
                     val info = manager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
-                    val currentVeriosnCode = snapshot.value.toString()
+                    val currentVersionCode = snapshot.value.toString()
                     @Suppress("DEPRECATION")
-                    if (info.versionCode.toString() < currentVeriosnCode) {
+                    if (info.versionCode.toString() < currentVersionCode) {
 
-//                        Log.d(TAG, "isLatestVersionCode(): info.versionCode: ${info.versionCode}, currentVeriosnCode: $currentVeriosnCode")
+//                        Log.d(TAG, "isLatestVersionCode(): info.versionCode: ${info.versionCode}, currentVersionCode: $currentVersionCode")
 
-                        try {
-                            continuation.resume(false)
-                        } catch (e: IllegalStateException) {
-                        }
+                       try { continuation.resume(false) }
+                       catch (e: IllegalStateException) { }
+
                     } else {
 
-//                        Log.d(TAG, "isLatestVersionCode() >= $currentVeriosnCode")
+//                        Log.d(TAG, "isLatestVersionCode() >= $currentVersionCode")
 
                         try {
                             continuation.resume(true)
@@ -582,8 +570,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             refPlayer.removeValue()
         }
         if (playerIdB != null) {
-            val refOponent = FirebaseDatabase.getInstance().getReference("userMatches/$playerIdB/$matchId")
-            refOponent.removeValue()
+            val refOpponent = FirebaseDatabase.getInstance().getReference("userMatches/$playerIdB/$matchId")
+            refOpponent.removeValue()
         }
 
         if (deleteMatch && matchId != "") {
@@ -628,9 +616,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                                     return@launch
                                 }
 
-                                val defferedGetMatchTimestamp = async { getMatchTimestamp(matchId) }
-                                var timestamp = defferedGetMatchTimestamp.await().toLong()
-                                defferedGetMatchTimestamp.cancel()
+                                val deferredGetMatchTimestamp = async { getMatchTimestamp(matchId) }
+                                var timestamp = deferredGetMatchTimestamp.await().toLong()
+                                deferredGetMatchTimestamp.cancel()
 
                                 if (timestamp == 0L && mTimestampPre > 0L)
                                     timestamp = mTimestampPre + 100L
@@ -641,13 +629,13 @@ class MainActivity : Activity(), View.OnTouchListener {
                                 if (timestamp > mTimestampPre) {
                                     mTimestampPre = timestamp
 
-                                    val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                                    val checkBaseData = defferedGetMatchBaseData.await()
-                                    defferedGetMatchBaseData.cancel()
+                                    val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+                                    val checkBaseData = deferredGetMatchBaseData.await()
+                                    deferredGetMatchBaseData.cancel()
 
-                                    val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-                                    val checkUpdateData = defferedGetMatchUpdateData.await()
-                                    defferedGetMatchUpdateData.cancel()
+                                    val deferredGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+                                    val checkUpdateData = deferredGetMatchUpdateData.await()
+                                    deferredGetMatchUpdateData.cancel()
 
                                     if (checkUpdateData != null && checkBaseData != null) {
 
@@ -681,29 +669,29 @@ class MainActivity : Activity(), View.OnTouchListener {
                                                 if (!checkBaseData.singleGame!!)
                                                     variant = getString(R.string.typeDouble)
 
-                                                val defferedUpdateMatchPlayer = async { addMatchToUserMatches(mPlayerId!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
-                                                defferedUpdateMatchPlayer.await()
-                                                defferedUpdateMatchPlayer.cancel()
+                                                val deferredUpdateMatchPlayer = async { addMatchToUserMatches(mPlayerId!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
+                                                deferredUpdateMatchPlayer.await()
+                                                deferredUpdateMatchPlayer.cancel()
 
-                                                var oponent = checkBaseData.playerIdB
+                                                var opponent = checkBaseData.playerIdB
                                                 if (mPlayerId == checkBaseData.playerIdB)
-                                                    oponent = checkBaseData.playerIdA
+                                                    opponent = checkBaseData.playerIdA
 
-                                                val defferedUserLanguage = async { getUserLanguage(oponent!!) }
-                                                val userLanguage = defferedUserLanguage.await()
-                                                defferedUserLanguage.cancel()
+                                                val deferredUserLanguage = async { getUserLanguage(opponent!!) }
+                                                val userLanguage = deferredUserLanguage.await()
+                                                deferredUserLanguage.cancel()
                                                 variant = getStringByLocal(this@MainActivity, R.string.typeSingle, null, null, userLanguage)
                                                 if (!checkBaseData.singleGame!!)
                                                     variant = getStringByLocal(this@MainActivity, R.string.typeDouble, null, null, userLanguage)
 
 //                                            Log.i(TAG, "matchUpdateListener(), userMatches, playerIdA: ${checkMatchBaseData!!.playerIdA}, playerIdB: ${checkMatchBaseData!!.playerIdB}")
-//                                            Log.i(TAG, "matchUpdateListener(), userMatches, mPlayerId: $mPlayerId, oponent: $oponent")
+//                                            Log.i(TAG, "matchUpdateListener(), userMatches, mPlayerId: $mPlayerId, opponent: $opponent")
 
-                                                val defferedUpdateMatchOponent = async { addMatchToUserMatches(oponent!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
-                                                defferedUpdateMatchOponent.await()
-                                                defferedUpdateMatchOponent.cancel()
+                                                val deferredUpdateMatchOpponent = async { addMatchToUserMatches(opponent!!, matchId, players, variant, checkUpdateData.turnPlayerId!!, timestamp.toString()) }
+                                                deferredUpdateMatchOpponent.await()
+                                                deferredUpdateMatchOpponent.cancel()
 
-//                                            Log.i(TAG, "matchUpdateListener(), addMatchToUserMatches(), mPlayerId: $mPlayerId, oponent: $oponent")
+//                                            Log.i(TAG, "matchUpdateListener(), addMatchToUserMatches(), mPlayerId: $mPlayerId, opponent: $opponent")
 
                                             }
 
@@ -748,20 +736,19 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private suspend fun quickMatchUpdateListener(): String = suspendCoroutine { continuation ->
-        refQickMatch = FirebaseDatabase.getInstance().getReference("quickMatch")
-        refQickMatchListener = object : ValueEventListener {
+        refQuickMatch = FirebaseDatabase.getInstance().getReference("quickMatch")
+        refQuickMatchListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 try {
                     val userId = snapshot.value.toString()
 
 //                    Log.i(TAG, "quickMatchUpdateListener(), userId: $userId")
 
-                    //??? java.lang.IllegalArgumentException
                     if (dialogQuickMatchInvitation.isShowing)
                         dialogQuickMatchInvitation.dismiss()
 
                     if (!prefs.getBoolean("playOnline", false)) {
-                        refQickMatch.removeEventListener(refQickMatchListener!!)
+                        refQuickMatch.removeEventListener(refQuickMatchListener!!)
                         return
                     }
 
@@ -781,7 +768,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
         }
 
-        refQickMatch.addValueEventListener(refQickMatchListener!!)
+        refQuickMatch.addValueEventListener(refQuickMatchListener!!)
 
     }
 
@@ -872,9 +859,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         var serverTimestamp = 0L
 
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedTimestamp = async { getTimestampFromServer() }
-            serverTimestamp = defferedTimestamp.await().toLong()
-            defferedTimestamp.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            serverTimestamp = deferredTimestamp.await().toLong()
+            deferredTimestamp.cancel()
         }
         var cntTime = 0
 
@@ -978,13 +965,11 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
     }
 
-    @Suppress("DEPRECATION")
     private suspend fun updateUserData(userId: String, userData: User): Boolean = suspendCoroutine { continuation ->
-        FirebaseInstanceId.getInstance().instanceId
+        FirebaseMessaging.getInstance().token
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
-
-                        userData.token = task.result?.token
+                        userData.token = task.result
                         val ref = FirebaseDatabase.getInstance().getReference("users")
                         ref.child(userId).setValue(userData)
                         ref.child(userId).child("timestamp").setValue(ServerValue.TIMESTAMP)
@@ -1044,9 +1029,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         matchList = ArrayList()
         var serverTimestamp = 0L
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedTimestamp = async { getTimestampFromServer() }
-            serverTimestamp = defferedTimestamp.await().toLong()
-            defferedTimestamp.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            serverTimestamp = deferredTimestamp.await().toLong()
+            deferredTimestamp.cancel()
         }
         val ref = FirebaseDatabase.getInstance().getReference("userMatches/$userId")
         val query = ref.orderByChild("timestamp")
@@ -1121,7 +1106,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             override fun onCancelled(error: DatabaseError) {
 
-//Log.i(TAG, "getTimestampFromServer(), error.code: ${error.code}, mTimestampPre: $mTimestampPre")
+//                Log.i(TAG, "getTimestampFromServer(), error.code: ${error.code}, mTimestampPre: $mTimestampPre")
 
                 try {
                     if (error.code == DatabaseError.PERMISSION_DENIED) {
@@ -1187,9 +1172,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         var timestamp = 0L
         var cnt = 0
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedTimestamp = async { getTimestampFromServer() }
-            timestamp = defferedTimestamp.await().toLong()
-            defferedTimestamp.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            timestamp = deferredTimestamp.await().toLong()
+            deferredTimestamp.cancel()
         }
         userListArray = ArrayList()
         val ref = FirebaseDatabase.getInstance().reference
@@ -1272,6 +1257,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             configuration.fontScale = 1f
             val metrics = DisplayMetrics()
+            @Suppress("DEPRECATION")
             windowManager.defaultDisplay.getMetrics(metrics)
             metrics.scaledDensity = configuration.fontScale * metrics.density
             @Suppress("DEPRECATION")
@@ -1352,10 +1338,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         dialogRematch.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialogRematch.setContentView(R.layout.dialogrematch)
 
-        dialogRewardBonus = Dialog(this)
-        dialogRewardBonus.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialogRewardBonus.setContentView(R.layout.dialogrewardbonus)
-
         setUI()
 
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -1367,12 +1349,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         mAuthFirebase = FirebaseAuth.getInstance()
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
 
-        mRewardedAd = if (BuildConfig.DEBUG) {
-            RewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
-        }
-        else {
-            RewardedAd(this, resources.getString(R.string.adMobVideoId))
-        }
         loadRewardedVideoAd()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1407,14 +1383,14 @@ class MainActivity : Activity(), View.OnTouchListener {
         super.onResume()
         engineIsRunning = false
         initRollValues = true
-        if (isEnginePlayer(ed.playerToMove) and (diceModus >= 4)) {
+        if (isEnginePlayer(ed.playerToMove) and (diceMode >= 4)) {
             if (!ed.isSingleGame and isDouble1) {
                 isDouble1 = false
                 setDiceDouble1()
                 setDiceValues(true)
             }
             if (ed.selectedGridItem >= 0)
-                diceModus = 5
+                diceMode = 5
         }
 
 //        Log.i(TAG, "onResume(), ed.playerToMove: " + ed.playerToMove + ", isDiceBoard: " + isDiceBoard)
@@ -1439,9 +1415,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         // latest app version code?
         GlobalScope.launch(Dispatchers.Main) {
             if (!mIsVersionChecked) {
-                val defferedIsLastVersionCode = async { isLatestVersionCode() }
-                val isLastVersionCode = defferedIsLastVersionCode.await()
-                defferedIsLastVersionCode.cancel()
+                val deferredIsLastVersionCode = async { isLatestVersionCode() }
+                val isLastVersionCode = deferredIsLastVersionCode.await()
+                deferredIsLastVersionCode.cancel()
                 if (!isLastVersionCode) {
                     showUpdateAppDialog(getString(R.string.notUpToDate), getString(R.string.matchUpdate) + "?",
                             getString(R.string.dialogLater), getString(R.string.dialogYes))
@@ -1484,9 +1460,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 //                        Log.i(TAG, "onResume(), myReceiver(), !!! isOnlineActive !!!, actionId: $actionId, matchId: $matchId, fromUserId: $fromUserId")
 
                         GlobalScope.launch(Dispatchers.Main) {
-                            val defferedTimestamp = async { getTimestampFromServer() }
-                            val tsServer = defferedTimestamp.await().toLong()
-                            defferedTimestamp.cancel()
+                            val deferredTimestamp = async { getTimestampFromServer() }
+                            val tsServer = deferredTimestamp.await().toLong()
+                            deferredTimestamp.cancel()
                             when (actionId) {
                                 "7" -> {
                                     initOnline()
@@ -1505,7 +1481,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                     }
                     else {
                         when (actionId) {
-                            "", "1" -> showInvitationFromNotificatioDialog(intent)
+                            "", "1" -> showInvitationFromNotificationDialog(intent)
                             "2" -> startOnlineMatch(matchId)
                             "3", "4" -> showContinueMatchDialog(matchId, actionId)
                             "8", "9" -> {
@@ -1526,13 +1502,15 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
                 else {
 
-                    showOfflineInvitationFromNotificatioDialog(intent)
+                    showOfflineInvitationFromNotificationDialog(intent)
 
                 }
             }
         }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver, IntentFilter(BROADCAST_PUSH_NOTIFICATION))
+
+//        Log.d(TAG, "onResume(), notification, intent.extras: + ${intent.extras}")
 
         if (notificationIntent == null) {
             intent.extras?.let {
@@ -1547,9 +1525,10 @@ class MainActivity : Activity(), View.OnTouchListener {
 //                if (intent.flags == Intent.FLAG_ACTIVITY_CLEAR_TOP + Intent.FLAG_ACTIVITY_NEW_TASK) {
                 if (intent.flags == 339738624) {
 
-//                    Log.d(TAG, "onResume(), intent.flags: ${(Intent.FLAG_ACTIVITY_CLEAR_TOP + Intent.FLAG_ACTIVITY_NEW_TASK)}")
+//                    Log.d(TAG, "onResume(), intent.flags == 339738624")
 
                     notificationIntent = intent
+
                     prefs = getSharedPreferences("prefs", 0)
                     val edi = prefs.edit()
                     edi.putBoolean("playOnline", true)
@@ -1647,11 +1626,12 @@ class MainActivity : Activity(), View.OnTouchListener {
         prefs = getSharedPreferences("prefs", 0)
         diceState = prefs.getInt("dice", 1)
         isDiceBoard = prefs.getBoolean("isDiceBoard", isDiceBoard)
-        val displaymetrics = DisplayMetrics()
-        windowManager.defaultDisplay.getMetrics(displaymetrics)
-        displayDensity = displaymetrics.density
-        displayWidth = displaymetrics.widthPixels
-        displayHeight = displaymetrics.heightPixels
+        val displayMetrics = DisplayMetrics()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
+        displayDensity = displayMetrics.density
+        displayWidth = displayMetrics.widthPixels
+        displayHeight = displayMetrics.heightPixels
         var displayMax = displayHeight
         if (displayWidth > displayHeight)
             displayMax = displayWidth
@@ -1673,7 +1653,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         initEngines(false)
         if (runPrefs.getString("diceRoll", "") != "") {
             setDiceValues(false)
-            ed.getDiceText(isDouble1, isServed, diceValues, diceModus)
+            ed.getDiceText(isDouble1, isServed, diceValues, diceMode)
         } else
             ed.diceText = ""
         if (ed.isFlipScreen) {
@@ -1720,7 +1700,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             if (ed.selectedGridItem >= 0 && selectedCol >= 0 && selectedRow >= 0)
                 setEntryButtons()
         }
-        if (flipModus == 1) {
+        if (flipMode == 1) {
             btnDice.setImageResource(R.drawable.button_flip)
             btnDice.visibility = ImageView.VISIBLE
         }
@@ -1803,7 +1783,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         updateTable(true)
 
-        if (isEnginePlayer(ed.playerToMove) and (diceModus == 4))
+        if (isEnginePlayer(ed.playerToMove) and (diceMode == 4))
             performEngineCommands(getEngineDiceCommand(ed.playerToMove, 3, diceRoll, diceHold, diceDouble1, isServedDouble1))
         else {
             if (diceState == 1) {
@@ -1874,15 +1854,21 @@ class MainActivity : Activity(), View.OnTouchListener {
                     Toast.makeText(applicationContext, getString(R.string.notYourTurn), Toast.LENGTH_SHORT).show()
                     return
                 }
-                if (isDouble1 and (diceModus != 5)) {
+
+//                Log.i(TAG, "myClickHandler(), R.id.doubleA, isDouble1: $isDouble1, diceMode: $diceMode, diceModePrev: $diceModePrev")
+
+                if (isDouble1 and (diceMode != 5)) {
                     isDouble1 = false
                     setDiceDouble1()
-                    diceModus = 1
+                    diceMode = 1
                     setDiceValues(true)
                     setBtnPlayer(ed.playerToMove)
                     diceView(diceRoll, diceHold)
                 } else {
-                    if (!isDouble1 and (diceModusPrev <= 3)) {
+                    if (!isDouble1 and (diceModePrev <= 3)) {
+                        for (i in diceDouble1.indices) {
+                            diceDouble1[i] = -1
+                        }
                         isDouble1 = true
                         getFromPrev()
                         setDiceValues(false)
@@ -1890,6 +1876,10 @@ class MainActivity : Activity(), View.OnTouchListener {
                         diceView(diceRoll, diceHold)
                     }
                 }
+
+                if (prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn)
+                    matchDataToDb(false, ONLINE_ACTIVE)
+
             }
 
             // entry buttons
@@ -1903,7 +1893,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (selectedRow >= 0) {
                     val result = ed.getResultFromSelectedGridItem(selectedRow, radioSelected)
                     if (ed.setPlayerResult(ed.playerToMove, selectedCol, selectedRow, result)) {
-                        diceModus = 5
+                        diceMode = 5
                         updateValues(gridPosition)
                         updateTable(true)
                     }
@@ -1969,7 +1959,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         doubleA.visibility = ImageView.INVISIBLE
         btnPlayerInfo.visibility = TextView.INVISIBLE
         engineEntryCommand = ""
-        if ((diceModus == 1) or (diceModus == 5))
+        if ((diceMode == 1) or (diceMode == 5))
             btnPlayerInfo2.visibility = TextView.INVISIBLE
         if (engineIsRunning and allEnginePlayer()) {
             Toast.makeText(applicationContext, getString(R.string.isStopped), Toast.LENGTH_SHORT).show()
@@ -1983,10 +1973,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             isDicing = false
         else {
 
-//            Log.i(TAG, "A btnDiceClicked(), flipModus: $flipModus, diceModus: $diceModus")
-
-            if (flipModus == 1) {
-                flipModus = 0
+            if (flipMode == 1) {
+                flipMode = 0
                 setDiceActions()
                 setSelectedItem(-1)
                 computeFlipScreen(false)
@@ -1996,14 +1984,12 @@ class MainActivity : Activity(), View.OnTouchListener {
                 return
             }
 
-//            Log.i(TAG, "B btnDiceClicked(), flipModus: $flipModus, diceModus: $diceModus, diceModusPrev: $diceModusPrev, isDouble1: $isDouble1")
+            if (flipMode == 2)
+                flipMode = 0
 
-            if (flipModus == 2)
-                flipModus = 0
+//            Log.i(TAG, "btnDiceClicked(), isDiceBoard: $isDiceBoard, diceMode: $diceMode, diceModePrev: $diceModePrev, isDouble1: $isDouble1")
 
-            if (!isDiceBoard && !ed.isSingleGame && diceModus == 1 && diceModusPrev == 4 && isDouble1) {
-
-//                Log.i(TAG, "btnDiceClicked(), TEST, diceModus: $diceModus, isDouble1: $isDouble1")
+            if (!isDiceBoard && !ed.isSingleGame && diceModePrev == 4 && ((diceMode == 1 && isDouble1) || (diceMode == 5 && !isDouble1))) {
 
                 diceD1.visibility = ImageView.INVISIBLE
                 diceD2.visibility = ImageView.INVISIBLE
@@ -2014,8 +2000,8 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             }
 
-            if (diceModus == 5) {
-                diceModus = 1
+            if (diceMode == 5) {
+                diceMode = 1
                 if (!ed.isSingleGame) {
                     isDouble1 = true
                     ed.diceTextDouble1 = ""
@@ -2023,21 +2009,17 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
             }
 
-//            Log.i(TAG, "C btnDiceClicked(), flipModus: $flipModus, diceModus: $diceModus, isDouble1: $isDouble1")
-
             setSelectedItem(-1)
             if (isSelectedGridItem)
                 updateTable(true)
 
-//            Log.i(TAG, "btnDiceClicked(), diceModus: " + diceModus + ", isEnginePlayer: " + isEnginePlayer(ed.playerToMove))
-
-            if ((diceModus > 1) and (diceModus <= 4) and isEnginePlayer(ed.playerToMove)) {
+            if ((diceMode > 1) and (diceMode <= 4) and isEnginePlayer(ed.playerToMove)) {
                 if ((diceRoll[0] >= 0) or (diceHold[0] >= 0))
-                    performEngineCommands(getEngineDiceCommand(ed.playerToMove, diceModus - 1, diceRoll, diceHold, diceDouble1, isServedDouble1))
+                    performEngineCommands(getEngineDiceCommand(ed.playerToMove, diceMode - 1, diceRoll, diceHold, diceDouble1, isServedDouble1))
             } else {
-                if (diceModus <= 3) {
-                    if (diceModus == 0)
-                        diceModus = 1
+                if (diceMode <= 3) {
+                    if (diceMode == 0)
+                        diceMode = 1
                     btnDice.visibility = ImageView.INVISIBLE
                     diceAction(diceRoll, diceHold, true)
                 } else {
@@ -2068,7 +2050,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
         if (event.action == MotionEvent.ACTION_UP) {
 
-            if ((diceModus == 2) or (diceModus == 3)) {
+            if ((diceMode == 2) or (diceMode == 3)) {
                 // 2D
                 when (view.id) {
                     R.id.diceA_1 -> setDiceValues(0)
@@ -2084,7 +2066,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             }
 
-            if (prefs.getBoolean("playOnline", false) && diceModus == 1 && isOnlineActive && isDoingTurn) {
+            if (prefs.getBoolean("playOnline", false) && diceMode == 1 && isOnlineActive && isDoingTurn) {
 
                 if (mPlayerABC != null) {
                     val nPlayer = ed.getNextPlayerAB(ed.playerStart)
@@ -2092,7 +2074,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 //                    Log.i(TAG, "onTouch(), mPlayerName: $mPlayerName, mPlayerABC: $mPlayerABC, nPlayer: $nPlayer")
 
                     if (mPlayerABC != nPlayer.toString()) {
-                        Toast.makeText(applicationContext, getString(R.string.correctionNextPlayer, mOponentName), Toast.LENGTH_LONG).show()
+                        Toast.makeText(applicationContext, getString(R.string.correctionNextPlayer, mOpponentName), Toast.LENGTH_LONG).show()
                         matchDataToDb(true, ONLINE_ACTIVE + CORRECTION)
                         return true
                     }
@@ -2139,9 +2121,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                         return true
                     }
 
-//                    Log.i(TAG, "onTouch, diceModus: " + diceModus + ", flipModus: " + flipModus)
-
-                    if ((ed.selectedGridItem == position) and ((diceModus == 5) or ((diceModus == 1) and (flipModus == 1)))
+                    if ((ed.selectedGridItem == position) and ((diceMode == 5) or ((diceMode == 1) and (flipMode == 1)))
                             and !isEnginePlayer(ed.getPrevPlayer(ed.playerToMove))) {
 
                         if (isUpdating) {
@@ -2161,7 +2141,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                         return true
                     }
 
-                    if ((diceState == 1) and (diceModus >= 5)) {
+                    if ((diceState == 1) and (diceMode >= 5)) {
                         btnDice.visibility = ImageView.VISIBLE
                         Toast.makeText(applicationContext, getString(R.string.pressCenterButton), Toast.LENGTH_SHORT).show()
                         playSound(1, 0)
@@ -2180,7 +2160,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                         selectedRow = row
                         ed.selectedGridItem = position
                         setEntryButtons()
-                        diceModus = 4
+                        diceMode = 4
                         updateTable(true)
                         return true
                     }
@@ -2229,12 +2209,10 @@ class MainActivity : Activity(), View.OnTouchListener {
                                             btnDice.visibility = ImageView.INVISIBLE
                                         else {
 
-//                                            Log.i(TAG, "XXX onTouch, diceModus: $diceModus, diceModusPrev: $diceModusPrev, flipModus: $flipModus, isDouble1: $isDouble1")
-
-                                            if (!ed.isSingleGame && diceModus == 1 && diceModusPrev >= 4 && !isDouble1)
+                                            if (!ed.isSingleGame && diceMode == 1 && diceModePrev >= 4 && !isDouble1)
                                                 isDouble1 = true
 
-                                            if (flipModus == 1)
+                                            if (flipMode == 1)
                                                 btnDice.setImageResource(R.drawable.button_dice)
                                         }
 
@@ -2246,7 +2224,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                                         Toast.makeText(applicationContext, getString(R.string.flipEnabled), Toast.LENGTH_SHORT).show()
                                     }
                                     updateTable(true)
-                                    flipModus = 0
+                                    flipMode = 0
                                 } else {
                                     ed.isFlipScreen = false
                                     Toast.makeText(applicationContext, getString(R.string.flipEngines), Toast.LENGTH_SHORT).show()
@@ -2310,20 +2288,20 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                 if (playerId != ' ') {
 
-//                    Log.i(TAG, "1 onTouch(), R.id.tableView, diceModus: $diceModus, isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn")
+//                    Log.i(TAG, "1 onTouch(), R.id.tableView, diceMode: $diceMode, isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn")
 
                     if (isUpdating) {
                         isUpdatingWarning()
                         return true
                     }
 
-                    if (flipModus == 1) {
+                    if (flipMode == 1) {
                         btnDice.visibility = ImageView.VISIBLE
                         Toast.makeText(applicationContext, getString(R.string.pressCenterButton), Toast.LENGTH_SHORT).show()
                         playSound(1, 0)
                         return true
                     } else
-                        flipModus = 0
+                        flipMode = 0
                     var result = 0
                     if ((diceState == 1) and isDiced) {
                         if (!ed.isSingleGame and (diceDouble1[0] >= 0)) {
@@ -2344,7 +2322,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                     if ((diceState == 0) or ((diceState == 1) and isDiced))
                         isUpdated = ed.setPlayerResult(playerId, col, row, result)
 
-//                    Log.i(TAG, "2 onTouch(), R.id.tableView, diceModus: $diceModus, playerId: $playerId, playerToMove: " + ed.playerToMove)
+//                    Log.i(TAG, "2 onTouch(), R.id.tableView, diceMode: $diceMode, playerId: $playerId, playerToMove: " + ed.playerToMove)
 //                    Log.i(TAG, "2 onTouch(), R.id.tableView, isUpdated: $isUpdated, isDiced: $isDiced")
 
                     if (isUpdated) {
@@ -2376,13 +2354,13 @@ class MainActivity : Activity(), View.OnTouchListener {
                         playSound(1, 0)
                     }
 
-//                    Log.i(TAG, "3 onTouch(), R.id.tableView, diceModus: " + diceModus)
+//                    Log.i(TAG, "3 onTouch(), R.id.tableView, diceMode: " + diceMode)
 
                     val isUpdateTable = updateTable(true)
 
-//                    Log.i(TAG, "4 onTouch(), isUpdateTable: $isUpdateTable, diceModus: $diceModus")
+//                    Log.i(TAG, "4 onTouch(), isUpdateTable: $isUpdateTable, diceMode: $diceMode")
 
-                    if (isUpdateTable && prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn && diceModus == 5) {
+                    if (isUpdateTable && prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn && diceMode == 5) {
 
 //                        Log.i(TAG, "5 onTouch(), isOnlineEntry: $isOnlineEntry")
 
@@ -2408,7 +2386,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                Log.i(TAG, "touchPoint x: " + touchPoint.x + ", y: " + touchPoint.y + ", id: " + id)
 
-                if (diceModus > 3) {
+                if (diceMode > 3) {
                     if ((id == R.id.dbRoll_1) or (id == R.id.dbRoll_2) or (id == R.id.dbRoll_3) or (id == R.id.dbRoll_4) or (id == R.id.dbRoll_5))
                         id = 0
                     if ((id == R.id.dbHold_1) or (id == R.id.dbHold_2) or (id == R.id.dbHold_3) or (id == R.id.dbHold_4) or (id == R.id.dbHold_5))
@@ -2463,19 +2441,19 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                        Log.i(TAG, "R.id.diceBoard, R.id.dbD1")
 
-                        if (isDouble1 and (diceModus != 5)) {
+                        if (isDouble1 and (diceMode != 5)) {
                             isDouble1 = false
-                            if (diceModus <= 3)
+                            if (diceMode <= 3)
                                 isDouble1Selected = true
                             setDiceDouble1()
-                            diceModus = 1
+                            diceMode = 1
 
                             setDiceValues(true)
                             setBtnPlayer(ed.playerToMove)
                             diceView(diceRoll, diceHold)
                             isDraw = true
                         } else {
-                            if (!isDouble1 and (diceModusPrev <= 3)) {
+                            if (!isDouble1 and (diceModePrev <= 3)) {
                                 isDouble1 = true
                                 getFromPrev()
                                 setDiceValues(false)
@@ -2580,22 +2558,22 @@ class MainActivity : Activity(), View.OnTouchListener {
             return
         }
         if (ed.selectedGridItem >= 0) {
-            flipModus = 0
+            flipMode = 0
             cancelEntry()
         } else {
-            if (!ed.isSingleGame and !isDouble1 and (diceModus == 1)) {
+            if (!ed.isSingleGame and !isDouble1 and (diceMode == 1)) {
                 isDouble1 = true
                 isDiced = true
                 getFromPrev()
                 setDiceValues(false)
-                ed.getDiceText(isDouble1, isServed, diceValues, diceModus - 1)
-                if (diceModus <= 3)
+                ed.getDiceText(isDouble1, isServed, diceValues, diceMode - 1)
+                if (diceMode <= 3)
                     btnDice.visibility = ImageView.VISIBLE
                 else
                     btnDice.visibility = ImageView.INVISIBLE
                 diceView(diceRoll, diceHold)
                 setDiceValues(false)
-                ed.getDiceText(isDouble1, isServed, diceValues, diceModus)
+                ed.getDiceText(isDouble1, isServed, diceValues, diceMode)
             }
         }
         setSelectedItem(-1)
@@ -2619,7 +2597,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         if (diceState == 1) {
             isDiced = true
             getFromPrev()
-            if (diceModus <= 3)
+            if (diceMode <= 3)
                 btnDice.visibility = ImageView.VISIBLE
             else
                 btnDice.visibility = ImageView.INVISIBLE
@@ -2633,7 +2611,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private fun updateValues(position: Int) {
         if (ed.isFlipScreen) {
-            flipModus = 1
+            flipMode = 1
             setToPrev()
             btnDice.setImageResource(R.drawable.button_flip)
             btnDice.visibility = ImageView.VISIBLE
@@ -2686,10 +2664,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (engine != null)
                     performEngineCommands("logging " + prefs.getBoolean("logging", false))
             }
-            NEW_GAME_REQUEST_CODE, FILE_MANAGER_LOAD_REQUEST_CODE -> if (resultCode == RESULT_OK) {
+            NEW_GAME_REQUEST_CODE -> if (resultCode == RESULT_OK) {
                 engineIsRunning = false
-                if (requestCode == FILE_MANAGER_LOAD_REQUEST_CODE && data != null)
-                    setPrefs(data.getStringExtra("gameData"))
                 if (prefs.getBoolean("gameFromFile", false) and !prefs.getBoolean("cbNewGame", false)) {
                     setUI()
                     return
@@ -2699,8 +2675,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 initRunPrefs()
                 ed = EscaleroData(this, runPrefs, prefs, displayWidth, displayHeight, displayDensity, orientation)
                 initDiceArrays()
-                diceModus = 0
-                diceModusPrev = 0
+                diceMode = 0
+                diceModePrev = 0
                 if (prefs.getBoolean("enginePlayer", true))
                     initEngines(true)
 
@@ -2714,11 +2690,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (!prefs.getBoolean("playOnline", false))
                     setRunPrefs()
 
-                flipModus = 0
+                flipMode = 0
                 if (diceState == 1) {
                     isDouble1 = true
                     diceInit(diceRoll, diceHold)
-                    diceModus = 0
+                    diceMode = 0
                     diceView(diceRoll, diceHold)
 
                 }
@@ -2741,6 +2717,11 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
 
             RC_SIGN_IN -> {
+                if (data == null) {
+                    onDisconnected()
+                    showErrorMessage(R.string.notLoggedIn)
+                    return
+                }
                 val result = Auth.GoogleSignInApi.getSignInResultFromIntent(data)
                 if (result != null) {
                     if (result.isSuccess) {
@@ -2767,9 +2748,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         GlobalScope.launch(Dispatchers.Main) {
 
             if (user.uid!!.isNotEmpty()) {
-                val defferedTimestamp = async { getTimestampFromServer() }
-                val ts = defferedTimestamp.await()
-                defferedTimestamp.cancel()
+                val deferredTimestamp = async { getTimestampFromServer() }
+                val ts = deferredTimestamp.await()
+                deferredTimestamp.cancel()
 
 //                Log.i(TAG, "invitePlayer(), fbUserId: $fbUserId, playerName: $playerName, ts: $ts")
 
@@ -2809,12 +2790,12 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         GlobalScope.launch(Dispatchers.Main) {
 
-            val defferedUserLanguage = async { getUserLanguage(userId) }
-            val userLanguage = defferedUserLanguage.await()
-            defferedUserLanguage.cancel()
-            val defferedTimestamp = async { getTimestampFromServer() }
-            val ts = defferedTimestamp.await()
-            defferedTimestamp.cancel()
+            val deferredUserLanguage = async { getUserLanguage(userId) }
+            val userLanguage = deferredUserLanguage.await()
+            deferredUserLanguage.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            val ts = deferredTimestamp.await()
+            deferredTimestamp.cancel()
 
 //                Log.i(TAG, "invitePlayer(), fbUserId: $fbUserId, playerName: $playerName, ts: $ts")
 
@@ -2846,13 +2827,13 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         GlobalScope.launch(Dispatchers.Main) {
 
-            val defferedUserLanguage = async { getUserLanguage(toUserId) }
-            val userLanguage = defferedUserLanguage.await()
-            defferedUserLanguage.cancel()
+            val deferredUserLanguage = async { getUserLanguage(toUserId) }
+            val userLanguage = deferredUserLanguage.await()
+            deferredUserLanguage.cancel()
 
-            val defferedTimestamp = async { getTimestampFromServer() }
-            val ts = defferedTimestamp.await()
-            defferedTimestamp.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            val ts = deferredTimestamp.await()
+            deferredTimestamp.cancel()
 
             val ref = FirebaseDatabase.getInstance().getReference("/notifications/$toUserId")
             val notifications = ref.child("notificationRequests")
@@ -2881,13 +2862,13 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         GlobalScope.launch(Dispatchers.Main) {
 
-            val defferedUserLanguage = async { getUserLanguage(toUserId) }
-            val userLanguage = defferedUserLanguage.await()
-            defferedUserLanguage.cancel()
+            val deferredUserLanguage = async { getUserLanguage(toUserId) }
+            val userLanguage = deferredUserLanguage.await()
+            deferredUserLanguage.cancel()
 
-            val defferedTimestamp = async { getTimestampFromServer() }
-            val ts = defferedTimestamp.await()
-            defferedTimestamp.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            val ts = deferredTimestamp.await()
+            deferredTimestamp.cancel()
 
             val ref = FirebaseDatabase.getInstance().getReference("/notifications/$toUserId")
             val notifications = ref.child("notificationRequests")
@@ -2918,13 +2899,13 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             updateUserStatus(playerId = mPlayerId, playing = false, singleGame = ed.isSingleGame)
 
-            val defferedUserLanguage = async { getUserLanguage(toUserId) }
-            val userLanguage = defferedUserLanguage.await()
-            defferedUserLanguage.cancel()
+            val deferredUserLanguage = async { getUserLanguage(toUserId) }
+            val userLanguage = deferredUserLanguage.await()
+            deferredUserLanguage.cancel()
 
-            val defferedTimestamp = async { getTimestampFromServer() }
-            val ts = defferedTimestamp.await()
-            defferedTimestamp.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            val ts = deferredTimestamp.await()
+            deferredTimestamp.cancel()
 
             val ref = FirebaseDatabase.getInstance().getReference("/notifications/$toUserId")
             val notifications = ref.child("notificationRequests")
@@ -3069,8 +3050,6 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private fun showMenuOffline() {
         val menuNewGame = 0
-        val menuSaveGame = 1
-        val menuLoadGame = 2
         val menuSettings = 3
         val menuInformation = 4
         val menuAdvertising = 5
@@ -3084,10 +3063,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         val actions = ArrayList<Int>()
         arrayAdapter.add(resources.getString(R.string.newGame))
         actions.add(menuNewGame)
-        arrayAdapter.add(resources.getString(R.string.fileSave))
-        actions.add(menuSaveGame)
-        arrayAdapter.add(resources.getString(R.string.fileLoad))
-        actions.add(menuLoadGame)
         arrayAdapter.add(resources.getString(R.string.prefTitle))
         actions.add(menuSettings)
         arrayAdapter.add(resources.getString(R.string.info))
@@ -3104,19 +3079,6 @@ class MainActivity : Activity(), View.OnTouchListener {
                     newGameIntent = Intent(this, NewGame::class.java)
                     startActivityForResult(newGameIntent, NEW_GAME_REQUEST_CODE)
                 }
-                menuSaveGame -> {
-                    fileManagerIntent = Intent(this, FileManager::class.java)
-                    fileManagerIntent.putExtra("fileActionCode", FILE_MANAGER_SAVE_REQUEST_CODE)
-                    fileManagerIntent.putExtra("gameData", saveGame())
-                    startActivityForResult(fileManagerIntent, FILE_MANAGER_SAVE_REQUEST_CODE)
-                }
-                menuLoadGame -> {
-                    val gameData = ""
-                    fileManagerIntent = Intent(this, FileManager::class.java)
-                    fileManagerIntent.putExtra("fileActionCode", FILE_MANAGER_LOAD_REQUEST_CODE)
-                    fileManagerIntent.putExtra("gameData", gameData)
-                    startActivityForResult(fileManagerIntent, FILE_MANAGER_LOAD_REQUEST_CODE)
-                }
                 menuSettings -> {
                     preferencesIntent = Intent(this, Preferences::class.java)
                     startActivityForResult(preferencesIntent, PREFERENCES_REQUEST_CODE)
@@ -3130,6 +3092,8 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     fun showAccountingDialog(text: String) {
+
+//        Log.i(TAG, "showAccountingDialog(), text: $text")
 
         //Log.i(TAG, "showAccountingDialog(), ads: " + prefs.getBoolean("advertising", true) + ", showAds: " + showAds
         //        + ", adsCounter: " + adsCounter + ", adsCounterMaximum: " + adsCounterMaximum + ", mInterstitialAd: " + mInterstitialAd);
@@ -3147,134 +3111,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         mAccountingDialog = accountingDialog.create()
         mAccountingDialog!!.show()
 
-    }
-
-    private fun saveGame(): String {
-        val pg = Pgnd("")
-        val nameA = prefs.getString("nameA", resources.getString(R.string.yourName))
-        val nameB = prefs.getString("nameB", resources.getString(R.string.yourName))
-        val nameC = prefs.getString("nameC", resources.getString(R.string.yourName))
-        val cDate = Date()
-        val date = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(cDate)
-        pg.setTag("Date", date)
-        pg.setTag("DiceState", diceState.toString())
-        pg.setTag("SingleGame", java.lang.Boolean.toString(ed.isSingleGame))
-        pg.setTag("Player", ed.playerNumber.toString())
-        pg.setTag("Starter", ed.playerStart.toString())
-        pg.setTag("PlayerToMove", ed.playerToMove.toString())
-        pg.setTag("Col", EscaleroData.COLS.toString())
-        val colPoints = "" + ed.pointsColumn1 + " " + ed.pointsColumn2 + " " + ed.pointsColumn3 + " " + ed.pointsBonus
-        pg.setTag("ColPoints", colPoints)
-        pg.setTag("ColMultiplier", ed.payoutMultiplier.toString())
-        pg.setTag("Unit", ed.monetaryUnit!!)
-        pg.setTag("BonusServed", ed.bonusServed.toString())
-        pg.setTag("BonusServedGrande", ed.bonusServedGrande.toString())
-        pg.setTag("PlayerColumn", java.lang.Boolean.toString(ed.isPlayerColumn))
-        pg.setTag("Summation", java.lang.Boolean.toString(ed.isSummation))
-        pg.setTag("FlipScreen", java.lang.Boolean.toString(ed.isFlipScreen))
-        pg.setTag("Icons", prefs.getInt("icons", 1).toString())
-        pg.setTag("Sounds", java.lang.Boolean.toString(prefs.getBoolean("sounds", true)))
-        pg.setTag("Logging", java.lang.Boolean.toString(prefs.getBoolean("logging", false)))
-        pg.setTag("Advertising", java.lang.Boolean.toString(prefs.getBoolean("advertising", true)))
-
-        pg.setTag("GridItem", ed.selectedGridItem.toString())
-        pg.setTag("Diced", java.lang.Boolean.toString(isDiced))
-        pg.setTag("Served", java.lang.Boolean.toString(isServed))
-
-        val position = position
-        var roll = ""
-
-        val modus = diceModus.toString()
-
-        pg.setTag("DiceModus", modus)
-        pg.setTag("DiceModusPrev", diceModusPrev.toString())
-
-        for (i in diceRoll.indices) {
-            roll =
-                if (diceRoll[i] < 0)
-                    "$roll-"
-                else
-                    roll + diceRoll[i]
-        }
-        pg.setTag("DiceRoll", roll)
-        var hold = ""
-        for (i in diceHold.indices) {
-            if (diceHold[i] < 0)
-                hold = "$hold-"
-            else
-                hold += diceHold[i]
-        }
-        pg.setTag("DiceHold", hold)
-        roll = ""
-        for (i in diceRollPrev.indices) {
-            if (diceRollPrev[i] < 0)
-                roll = "$roll-"
-            else
-                roll += diceRollPrev[i]
-        }
-        pg.setTag("DiceRollPrev", roll)
-        hold = ""
-        for (i in diceHoldPrev.indices) {
-            if (diceHoldPrev[i] < 0)
-                hold = "$hold-"
-            else
-                hold += diceHoldPrev[i]
-        }
-        pg.setTag("DiceHoldPrev", hold)
-        roll = ""
-        for (i in diceDouble1.indices) {
-            if (diceDouble1[i] < 0)
-                roll = "$roll-"
-            else
-                roll += diceDouble1[i]
-        }
-        pg.setTag("DiceDouble1", roll)
-        pg.setTag("Double1", java.lang.Boolean.toString(isDouble1))
-        pg.setTag("ServedDouble1", java.lang.Boolean.toString(isServedDouble1))
-
-        pg.setTag("NameA", nameA!!)
-        pg.setTag("NameB", nameB!!)
-        pg.setTag("NameC", nameC!!)
-        pg.setTag("\$E1", runPrefs.getString("engineNameA", "")!!)
-        pg.setTag("\$E2", runPrefs.getString("engineNameB", "")!!)
-        pg.setTag("\$E3", runPrefs.getString("engineNameC", "")!!)
-        var playerA = prefs.getString("nameA", resources.getString(R.string.yourName))
-        var playerB = prefs.getString("nameB", resources.getString(R.string.yourName))
-        var playerC = prefs.getString("nameC", resources.getString(R.string.yourName))
-        pg.setTag("EnginePlayerA", java.lang.Boolean.toString(prefs.getBoolean("enginePlayerA", true)))
-        pg.setTag("EnginePlayerB", java.lang.Boolean.toString(prefs.getBoolean("enginePlayerB", false)))
-        pg.setTag("EnginePlayerC", java.lang.Boolean.toString(prefs.getBoolean("enginePlayerC", false)))
-        if (prefs.getBoolean("enginePlayerA", true))
-            playerA = pg.getTag("\$E1")
-        if (prefs.getBoolean("enginePlayerB", false))
-            playerB = pg.getTag("\$E2")
-        if (prefs.getBoolean("enginePlayerC", false))
-            playerC = pg.getTag("\$E3")
-        pg.setTag("PlayerA", playerA!!)  // not in the prefs
-        pg.setTag("PlayerB", playerB!!)  // not in the prefs
-        var game = "$playerA/$playerB"
-        if (ed.playerNumber == 3) {
-            pg.setTag("PlayerC", playerC!!)  // not in the prefs
-            game = "$game/$playerC"
-        }
-        pg.setTag("Game", game)
-        if (mPlayerName == null)
-            pg.setTag("OnlinePlayerName", "")
-        else
-            pg.setTag("OnlinePlayerName", mPlayerName!!)
-        pg.setTag("OnlineEpA", prefs.getInt("epA", 0).toString())
-        if (mPlayerName == nameA && mPlayerEp >= 0)
-            pg.setTag("OnlineEpA", mPlayerEp.toString())
-        pg.setTag("OnlineEpB", prefs.getInt("epB", 0).toString())
-        if (mPlayerName == nameB && mPlayerEp >= 0)
-            pg.setTag("OnlineEpB", mPlayerEp.toString())
-        pg.setTag("OnlineStat", "")
-        pg.setTag("OnlineCheckId", ed.onlineCheckId)
-        pg.setTag("AppVersionCode", BuildConfig.VERSION_CODE.toString())
-        pg.setTag("AppVersionName", BuildConfig.VERSION_NAME)
-        pg.setTag("Position", position)
-
-        return pg.getGameData()
     }
 
     private fun showInfoMenu() {
@@ -3297,9 +3133,9 @@ class MainActivity : Activity(), View.OnTouchListener {
             GlobalScope.launch(Dispatchers.Main) {
                 val userLanguage: String
                 if (mPlayerId != null) {
-                    val defferedUserLanguage = async { getUserLanguage(mPlayerId!!) }
-                    userLanguage = defferedUserLanguage.await()
-                    defferedUserLanguage.cancel()
+                    val deferredUserLanguage = async { getUserLanguage(mPlayerId!!) }
+                    userLanguage = deferredUserLanguage.await()
+                    deferredUserLanguage.cancel()
                 }
                 else
                     userLanguage = Locale.getDefault().language
@@ -3358,8 +3194,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             ed.selectedGridItem = -1
             ed.diceText = ""
             ed.diceTextDouble1 = ""
-            diceModus = 0
-            flipModus = 0
+            diceMode = 0
+            flipMode = 0
             ed.isFlipScreen = false
             if (isOrientationReverse)
                 computeFlipScreen(false)
@@ -3367,7 +3203,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             if (diceState == 0)
                 btnDice.visibility = ImageView.INVISIBLE
             if (diceState == 1) {
-                diceModus = 1
+                diceMode = 1
                 diceInit(diceRoll, diceHold)
                 btnDice.setImageResource(R.drawable.button_dice)
 
@@ -3405,10 +3241,10 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun setDiceActions() {
         if (diceState == 1) {
             isDiced = false
-            if (flipModus != 2)
+            if (flipMode != 2)
                 setToPrev()
             btnDice.visibility = ImageView.VISIBLE
-            diceModus = 5
+            diceMode = 5
             diceView(diceRoll, diceHold)
         } else
             btnDice.visibility = ImageView.INVISIBLE
@@ -3464,8 +3300,8 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     fun setToPrev() {
-        diceModusPrev = diceModus
-        diceModus = 1
+        diceModePrev = diceMode
+        diceMode = 1
         for (i in diceRoll.indices) {
             diceRollPrev[i] = diceRoll[i]
             diceHoldPrev[i] = diceHold[i]
@@ -3479,8 +3315,8 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private fun getFromPrev() {
-        diceModus = diceModusPrev
-        diceModusPrev = 0
+        diceMode = diceModePrev
+        diceModePrev = 0
         for (i in diceRollPrev.indices) {
             diceRoll[i] = diceRollPrev[i]
             diceHold[i] = diceHoldPrev[i]
@@ -3497,7 +3333,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     fun diceAction(diceRoll: IntArray, diceHold: IntArray, fromButton: Boolean) {
 
-//        Log.i(TAG, "1 diceAction(), diceModus: " + diceModus + ", isDouble1: " + isDouble1 + ", fromButton: " + fromButton);
+//        Log.i(TAG, "1 diceAction(), diceMode: " + diceMode + ", isDouble1: " + isDouble1 + ", fromButton: " + fromButton);
 
         if (fromButton)
             playSound(3, 0)
@@ -3507,7 +3343,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         if (!ed.isSingleGame and isDouble1)
             isServedDouble1 = false
         var cntDiceRoll = 0
-        if (diceModus <= 1) {
+        if (diceMode <= 1) {
             for (i in diceRoll.indices) {
                 diceRoll[i] = -2
                 diceHold[i] = -1
@@ -3593,7 +3429,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private fun setDiceDouble1() {
-        diceModusPrev = diceModus
+        diceModePrev = diceMode
         for (i in diceRoll.indices) {
             if (diceRoll[i] >= 0)
                 diceDouble1[i] = diceRoll[i]
@@ -3622,7 +3458,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     fun diceView(diceRoll: IntArray, diceHold: IntArray) {
 
-//        Log.i(TAG, "diceView(), diceModus: " + diceModus + ", diceModusPrev: "  + diceModusPrev)
+//        Log.i(TAG, "diceView(), diceMode: " + diceMode + ", diceModePrev: "  + diceModePrev)
 
         for (i in diceRoll.indices) {
             if (diceRoll[i] >= 0) {
@@ -3646,7 +3482,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
         }
 
-        if ((diceModus == 1 && diceModusPrev == 4)) {
+        if ((diceMode == 1 && diceModePrev == 4)) {
             // online, take turn!
             for (i in diceRoll.indices) {
                 if (diceRoll[i] >= 0) {
@@ -3683,7 +3519,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
         }
 
-        when (diceModus) {
+        when (diceMode) {
             0 -> btnDice.setImageResource(R.drawable.button_dice)
             1 -> btnDice.setImageResource(R.drawable.button_dice)
             2 -> btnDice.setImageResource(R.drawable.button_dice)
@@ -3694,16 +3530,16 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
 
         btnDice.visibility = ImageView.VISIBLE
-        if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove))
+        if ((diceMode == 4) and !isEnginePlayer(ed.playerToMove))
             btnDice.visibility = ImageView.INVISIBLE
 
         if (prefs.getBoolean("playOnline", false) && isOnlineEntry)
             btnDice.visibility = ImageView.INVISIBLE
 
-//        Log.i(TAG, "diceView(), diceModus: " + diceModus + ", isDoingTurn: "  + isDoingTurn + ", isOnlineEntry: "  + isOnlineEntry)
-//        Log.i(TAG, "diceView(), diceModus: $diceModus, diceModusPrev: $diceModusPrev, ed.isSingleGame: ${ed.isSingleGame}, isDouble1: $isDouble1")
-
+//        Log.i(TAG, "diceView(), diceMode: " + diceMode + ", isDoingTurn: "  + isDoingTurn + ", isOnlineEntry: "  + isOnlineEntry)
+//        Log.i(TAG, "diceView(), diceMode: $diceMode, diceModePrev: $diceModePrev, ed.isSingleGame: ${ed.isSingleGame}, isDouble1: $isDouble1")
 //        Log.i(TAG, "A diceView(), setOnlineMessage()")
+
         setOnlineMessage()
 
         if (ed.isSingleGame) {
@@ -3714,14 +3550,15 @@ class MainActivity : Activity(), View.OnTouchListener {
             diceD5.visibility = ImageView.INVISIBLE
             doubleA.visibility = ImageView.INVISIBLE
         } else {
-            if (isDouble1 && !(diceModus == 1 && diceModusPrev == 4)) {
+//            if (isDouble1 && !(diceMode == 1 && diceModePrev == 4)) {
+            if (!prefs.getBoolean("playOnline", false) && isDouble1 && !(diceMode == 1 && diceModePrev == 4)) {
                 diceD1.visibility = ImageView.INVISIBLE
                 diceD2.visibility = ImageView.INVISIBLE
                 diceD3.visibility = ImageView.INVISIBLE
                 diceD4.visibility = ImageView.INVISIBLE
                 diceD5.visibility = ImageView.INVISIBLE
                 doubleA.visibility = ImageView.INVISIBLE
-                if (diceModus >= 2)
+                if (diceMode >= 2)
                     doubleA.visibility = ImageView.VISIBLE
             } else {
                 for (i in diceDouble1.indices) {
@@ -3738,15 +3575,29 @@ class MainActivity : Activity(), View.OnTouchListener {
                 diceD3.visibility = ImageView.VISIBLE
                 diceD4.visibility = ImageView.VISIBLE
                 diceD5.visibility = ImageView.VISIBLE
+//                if (isDouble1 && diceMode == 1) {
+                if (!prefs.getBoolean("playOnline", false) && isDouble1 && diceMode == 1) {
+                    diceD1.visibility = ImageView.INVISIBLE
+                    diceD2.visibility = ImageView.INVISIBLE
+                    diceD3.visibility = ImageView.INVISIBLE
+                    diceD4.visibility = ImageView.INVISIBLE
+                    diceD5.visibility = ImageView.INVISIBLE
+                }
 
-                if ((diceModus == 1) and ((diceModusPrev == 2) or (diceModusPrev == 3)))
+                if ((diceMode == 1) and ((diceModePrev == 2) or (diceModePrev == 3)))
                     doubleA.visibility = ImageView.VISIBLE
                 else
                     doubleA.visibility = ImageView.INVISIBLE
+
             }
         }
 
-        if (flipModus == 1) {
+        if (isEnginePlayer(ed.playerToMove))
+            doubleA.visibility = ImageView.INVISIBLE
+        if (!ed.isSingleGame && prefs.getBoolean("playOnline", false) && isDouble1 && diceMode >= 2)
+            doubleA.visibility = ImageView.VISIBLE
+
+        if (flipMode == 1) {
             btnDice.setImageResource(R.drawable.button_flip)
             btnDice.visibility = ImageView.VISIBLE
         }
@@ -3756,13 +3607,13 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun setOnlineMessage() {
 
 //        Log.i(TAG, "setOnlineMessage(), online: ${prefs.getBoolean("playOnline", false)}, mIsSignIn: $mIsSignIn, isOnlineActive: $isOnlineActive")
-//        Log.i(TAG, "setOnlineMessage(), isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn, diceModus: $diceModus, diceModusPrev: $diceModusPrev")
+//        Log.i(TAG, "setOnlineMessage(), isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn, diceMode: $diceMode, diceModePrev: $diceModePrev")
 
         if (prefs.getBoolean("playOnline", false) && isOnlineActive) {
             btnPlayerResult.visibility = TextView.VISIBLE
             btnPlayerRound.visibility = TextView.VISIBLE
             if (isDoingTurn) {
-                when (diceModus) {
+                when (diceMode) {
                     0, 1 -> {
                         btnDice.visibility = ImageView.VISIBLE
                         btnDice.setImageResource(R.drawable.button_dice)
@@ -3789,9 +3640,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                         if (isOnlineEntry) {
                             if (mPlayerABC == ed.getNextPlayerAB(ed.playerStart).toString()) {
 
-//                                Log.i(TAG, "setOnlineMessage(), entry correction, diceModus: $diceModus --> $diceModusPrev")
+//                                Log.i(TAG, "setOnlineMessage(), entry correction, diceMode: $diceMode --> $diceModePrev")
 
-                                diceModus = diceModusPrev
+                                diceMode = diceModePrev
                                 diceView(diceRoll, diceHold)
                             } else {
                                 if (btnPlayerResult.text != resources.getString(R.string.confirmEntry))
@@ -3805,7 +3656,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             else {
                 btnDice.setImageResource(R.drawable.button_stop)
                 btnPlayerRound.visibility = TextView.VISIBLE
-                when (diceModus) {
+                when (diceMode) {
                     0, 1, 2, 3 -> btnPlayerResult.text = resources.getString(R.string.waitingFor)
                     4, 5 -> {
                         btnPlayerResult.text = resources.getString(R.string.waitForOk)
@@ -3850,7 +3701,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         paint.style = Paint.Style.STROKE
         val width = canvas.width.toFloat()
         val height = canvas.height.toFloat()
-        if (diceModus < 4)
+        if (diceMode < 4)
             canvas.drawRect(0f, 0f, width, height, paint)
         return bm
     }
@@ -3866,7 +3717,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     fun setBtnPlayer(playerId: Char) {
 
-//        Log.i(TAG, "setBtnPlayer(), playerId: $playerId, diceModus: $diceModus, diceModusPrev: $diceModusPrev")
+//        Log.i(TAG, "setBtnPlayer(), playerId: $playerId, diceMode: $diceMode, diceModePrev: $diceModePrev")
 
         if (ed.isGameOver && !prefs.getBoolean("playOnline", false)) {
             gameOver()
@@ -3877,7 +3728,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         setDiceValues(true)
         val diceTextDouble = ed.getDiceText(true, isServedDouble1, diceValuesDouble1, 3)
         setDiceValues(false)
-        val diceText = ed.getDiceText(false, isServed, diceValues, diceModus)
+        val diceText = ed.getDiceText(false, isServed, diceValues, diceMode)
         btnPlayerName.text = name
         btnPlayerIcon.visibility = TextView.VISIBLE
         when (playerId) {
@@ -3897,7 +3748,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 btnPlayerName.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
                 btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
                 btnPlayerInfo2.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
-                if (diceModus == 5) {
+                if (diceMode == 5) {
                     btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                     btnPlayerInfo2.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                     if (ed.playerNumber == 3) {
@@ -3924,7 +3775,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 btnPlayerName.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                 btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                 btnPlayerInfo2.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
-                if (diceModus == 5) {
+                if (diceMode == 5) {
                     btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
                     btnPlayerInfo2.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerA))
                 }
@@ -3943,7 +3794,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 btnPlayerName.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerC))
                 btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerC))
                 btnPlayerInfo2.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerC))
-                if (diceModus == 5) {
+                if (diceMode == 5) {
                     btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                     btnPlayerInfo2.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                 }
@@ -3953,11 +3804,11 @@ class MainActivity : Activity(), View.OnTouchListener {
         if ((diceState == 1) and !ed.isSingleGame) {
             var doublePlayer = 1
 
-//            Log.i(TAG, "setBtnPlayer(), playerId: $playerId, diceModus: $diceModus, diceModusPrev: $diceModusPrev, flipModus: $flipModus, isDouble1: $isDouble1")
+//            Log.i(TAG, "setBtnPlayer(), playerId: $playerId, diceMode: $diceMode, diceModePrev: $diceModePrev, flipMode: $flipMode, isDouble1: $isDouble1")
 
-            if (!isDouble1 or (isDouble1 and (diceModus >= 4))) {
+            if (!isDouble1 or (isDouble1 and (diceMode >= 4))) {
                 doublePlayer = 2
-                if (diceModus == 5 || (!isDouble1 && diceModus == 1 && flipModus == 1))
+                if (diceMode == 5 || (!isDouble1 && diceMode == 1 && flipMode == 1))
                     doublePlayer = 1
             }
             name = "$name ($doublePlayer)"
@@ -3968,11 +3819,11 @@ class MainActivity : Activity(), View.OnTouchListener {
         } else
             btnPlayerName.visibility = TextView.INVISIBLE
 
-        var diceTry = diceModus
+        var diceTry = diceMode
         if (diceTry == 5)
             diceTry = 1
 
-        if ((diceState == 1) and (diceModus >= 1))
+        if ((diceState == 1) and (diceMode >= 1))
             info = diceText
 
         var round = ""
@@ -3994,7 +3845,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (diceState == 0) {
                     btnPlayerResult.visibility = TextView.VISIBLE
                     btnPlayerResult.text = resources.getString(R.string.resultValue)
-                    diceModus = 0
+                    diceMode = 0
                 }
             }
         }
@@ -4009,7 +3860,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         } else
             btnPlayerInfo2.visibility = TextView.INVISIBLE
         if (info != "") {
-            if (diceModus == 1 && diceModusPrev == 4) {
+            if (diceMode == 1 && diceModePrev == 4) {
                 if (ed.playerToMove == 'A')
                     btnPlayerInfo.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPlayerB))
                 if (ed.playerToMove == 'B')
@@ -4032,190 +3883,6 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     }
 
-    private fun setPrefs(gameData: String?) {
-
-//        Log.i(TAG, "setPrefs(), gameData:\n $gameData")
-
-        if (gameData.isNullOrEmpty())
-            return
-
-        val pg = Pgnd(gameData)
-
-        val eDiced = pg.getTag("Diced")
-        val eDiceModus = pg.getTag("DiceModus")
-        if (eDiced == "false" && eDiceModus == "4")
-            pg.setTag("DiceModus", "1")
-
-        val position = pg.getTag("Position")
-
-        val ed = prefs.edit()
-        ed.putBoolean("isSingleGame", java.lang.Boolean.valueOf(pg.getTag("SingleGame")))
-        ed.putInt("players", Integer.parseInt(pg.getTag("Player")!!))
-        val enginePlayerA = java.lang.Boolean.valueOf(pg.getTag("EnginePlayerA"))
-        val enginePlayerB = java.lang.Boolean.valueOf(pg.getTag("EnginePlayerB"))
-        val enginePlayerC = java.lang.Boolean.valueOf(pg.getTag("EnginePlayerC"))
-        var enginePlayer = false
-        if ((enginePlayerA) or (enginePlayerB) or (enginePlayerC))
-            enginePlayer = true
-        ed.putBoolean("enginePlayer", enginePlayer)
-        ed.putBoolean("enginePlayerA", enginePlayerA)
-        ed.putBoolean("enginePlayerB", enginePlayerB)
-        ed.putBoolean("enginePlayerC", enginePlayerC)
-        ed.putString("nameA", pg.getTag("NameA"))
-        ed.putString("nameB", pg.getTag("NameB"))
-        ed.putString("nameC", pg.getTag("NameC"))
-        ed.putBoolean("gameFromFile", true)
-        ed.putInt("dice", Integer.parseInt(pg.getTag("DiceState")!!))
-        val colStr = pg.getTag("ColPoints")!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        if (colStr.size == 4) {
-            ed.putInt("pointsCol1", Integer.parseInt(colStr[0]))
-            ed.putInt("pointsCol2", Integer.parseInt(colStr[1]))
-            ed.putInt("pointsCol3", Integer.parseInt(colStr[2]))
-            ed.putInt("pointsBon", Integer.parseInt(colStr[3]))
-        }
-        ed.putInt("multiplier", Integer.parseInt(pg.getTag("ColMultiplier")!!))
-        ed.putString("unit", pg.getTag("Unit"))
-        ed.putInt("bonusServed", Integer.parseInt(pg.getTag("BonusServed")!!))
-        ed.putInt("bonusServedGrande", Integer.parseInt(pg.getTag("BonusServedGrande")!!))
-
-        if (!prefs.getBoolean("playOnline", false)) {
-            ed.putInt("icons", Integer.parseInt(pg.getTag("Icons")!!))
-            ed.putBoolean("isPlayerColumn", java.lang.Boolean.valueOf(pg.getTag("PlayerColumn")))
-            ed.putBoolean("isSummation", java.lang.Boolean.valueOf(pg.getTag("Summation")))
-            ed.putBoolean("sounds", java.lang.Boolean.valueOf(pg.getTag("Sounds")))
-            ed.putBoolean("computeFlipScreen", java.lang.Boolean.valueOf(pg.getTag("FlipScreen")))
-            ed.putBoolean("logging", java.lang.Boolean.valueOf(pg.getTag("Logging")))
-            ed.putBoolean("advertising", java.lang.Boolean.valueOf(pg.getTag("Advertising")))
-        }
-
-        if (position == "")
-            ed.putBoolean("cbNewGame", true)
-        else
-            ed.putBoolean("cbNewGame", false)
-        var eA = pg.getTag("OnlineEpA")!!
-
-        if (eA == "")
-            eA = "0"
-
-        if (mPlayerName == pg.getTag("NameA"))
-            eA = mPlayerEp.toString()
-
-        ed.putInt("epA", Integer.parseInt(eA))
-        var eB = pg.getTag("OnlineEpB")!!
-        if (eB == "")
-            eB = "0"
-
-        if (mPlayerName == pg.getTag("NameB"))
-            eB = mPlayerEp.toString()
-
-        ed.putInt("epB", Integer.parseInt(eB))
-
-        ed.apply()
-
-        var isRollOrHold = false
-        val edi = runPrefs.edit()
-        if (pg.getTag("Starter") != "")
-            edi.putString("playerStart", "" + pg.getTag("Starter"))
-        if (pg.getTag("PlayerToMove") != "")
-            edi.putString("playerToMove", "" + pg.getTag("PlayerToMove"))
-        if (gameData != "") {
-            edi.putString("\$E1", pg.getTag("\$E1"))
-            edi.putString("\$E2", pg.getTag("\$E2"))
-            edi.putString("\$E3", pg.getTag("\$E3"))
-            edi.putInt("selectedGridItem", Integer.parseInt(pg.getTag("GridItem")!!))
-            edi.putBoolean("isDiced", java.lang.Boolean.valueOf(pg.getTag("Diced")))
-            edi.putBoolean("isServed", java.lang.Boolean.valueOf(pg.getTag("Served")))
-            edi.putInt("diceModus", Integer.parseInt(pg.getTag("DiceModus")!!))
-            edi.putInt("diceModusPrev", Integer.parseInt(pg.getTag("DiceModusPrev")!!))
-            var str = ""
-            var tmp = pg.getTag("DiceRoll")
-            var y = tmp!!.length -1
-            for (i in 0..y) {
-                str =
-                        if (tmp[i] == '-')
-                            "$str-1 "
-                        else {
-                            isRollOrHold = true
-                            str + tmp[i] + " "
-                        }
-            }
-            edi.putString("diceRoll", str)
-            str = ""
-            tmp = pg.getTag("DiceHold")
-            y = tmp!!.length -1
-            for (i in 0..y) {
-                str =
-                        if (tmp[i] == '-')
-                            "$str-1 "
-                        else {
-                            isRollOrHold = true
-                            str + tmp[i] + " "
-                        }
-            }
-            edi.putString("diceHold", str)
-            str = ""
-            tmp = pg.getTag("DiceRollPrev")
-            y = tmp!!.length -1
-            for (i in 0..y) {
-                str =
-                        if (tmp[i] == '-')
-                            "$str-1 "
-                        else
-                            str + tmp[i] + " "
-            }
-            edi.putString("diceRollPrev", str)
-            str = ""
-            tmp = pg.getTag("DiceHoldPrev")
-            y = tmp!!.length -1
-            for (i in 0..y) {
-                str =
-                        if (tmp[i] == '-')
-                            "$str-1 "
-                        else
-                            str + tmp[i] + " "
-            }
-            edi.putString("diceHoldPrev", str)
-            str = ""
-            tmp = pg.getTag("DiceDouble1")
-            y = tmp!!.length -1
-            for (i in 0..y) {
-                str =
-                        if (tmp[i] == '-')
-                            "$str-1 "
-                        else
-                            str + tmp[i] + " "
-            }
-
-            edi.putString("diceDouble1", str)
-            edi.putBoolean("isDouble1", java.lang.Boolean.valueOf(pg.getTag("Double1")))
-            edi.putBoolean("isServedDouble1", java.lang.Boolean.valueOf(pg.getTag("ServedDouble1")))
-
-            if (position == "") {
-                if (!isRollOrHold) {
-                    edi.putInt("diceModus", 0)
-                    edi.putInt("diceModusPrev", 0)
-                    val ini = "-1 -1 -1 -1 -1 "
-                    edi.putString("diceRoll", ini)
-                    edi.putString("diceHold", ini)
-                    edi.putString("diceRollPrev", ini)
-                    edi.putString("diceHoldPrev", ini)
-                    edi.putString("diceDouble1", ini)
-                }
-            } else {
-                val textStr = position!!.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                for (i in textStr.indices) {
-                    if (textStr[i].startsWith("setcol ")) {
-                        val tmpStr = textStr[i].split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                        val id = tmpStr[1] + tmpStr[2]
-                        val value = tmpStr[3].replace("-", "-1")
-                        edi.putString(id, value)
-                    }
-                }
-            }
-        }
-        edi.apply()
-    }
-
     private fun setRunPrefs() {
         val edi = runPrefs.edit()
         edi.putString("A0", ed.getPlayerPrefs('A', 0))
@@ -4228,7 +3895,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         edi.putString("C1", ed.getPlayerPrefs('C', 1))
         edi.putString("C2", ed.getPlayerPrefs('C', 2))
 
-//        Log.i(TAG, "setRunPrefs(), diceModus: " + diceModus + ", diceModusPrev: " + diceModusPrev + ", ed.selectedGridItem: " + ed.selectedGridItem)
+//        Log.i(TAG, "setRunPrefs(), diceMode: " + diceMode + ", diceModePrev: " + diceModePrev + ", ed.selectedGridItem: " + ed.selectedGridItem)
 
         edi.putInt("selectedGridItem", ed.selectedGridItem)
         edi.putInt("selectedCol", selectedCol)
@@ -4238,7 +3905,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         edi.putBoolean("isDiced", isDiced)
         edi.putBoolean("isServed", isServed)
-        edi.putInt("diceModus", diceModus)
+        edi.putInt("diceModus", diceMode)
         edi.putInt("flipModus", 0)
         edi.putBoolean("isOrientationReverse", false)
         var str = ""
@@ -4246,7 +3913,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             str = "$str$aDiceRoll "
         }
         edi.putString("diceRoll", str)
-        edi.putInt("diceModusPrev", diceModusPrev)
+        edi.putInt("diceModusPrev", diceModePrev)
 
         str = ""
         for (aDiceHold in diceHold) {
@@ -4289,11 +3956,11 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun getRunPrefs() {
         isDiced = runPrefs.getBoolean("isDiced", false)
         isServed = runPrefs.getBoolean("isServed", false)
-        flipModus = runPrefs.getInt("flipModus", 0)
-        diceModus = runPrefs.getInt("diceModus", 0)
-        diceModusPrev = runPrefs.getInt("diceModusPrev", 0)
+        flipMode = runPrefs.getInt("flipModus", 0)
+        diceMode = runPrefs.getInt("diceModus", 0)
+        diceModePrev = runPrefs.getInt("diceModusPrev", 0)
 
-//        Log.i(TAG, "getRunPrefs(), diceModus: " + diceModus + ", diceModusPrev: " + diceModusPrev)
+//        Log.i(TAG, "getRunPrefs(), diceMode: " + diceMode + ", diceModePrev: " + diceModePrev)
 
         if (runPrefs.getString("diceRoll", "") == "")
             initDiceArrays()
@@ -4377,9 +4044,9 @@ class MainActivity : Activity(), View.OnTouchListener {
     // 2D
     private fun animation(initRound: Boolean) {
 
-//        Log.i(TAG, "animation(), initRound: $initRound, diceModus: $diceModus, diceModusPrev: $diceModusPrev")
+//        Log.i(TAG, "animation(), initRound: $initRound, diceMode: $diceMode, diceModePrev: $diceModePrev")
 
-        if (diceModus == 1) {
+        if (diceMode == 1) {
             diceA1.visibility = ImageView.VISIBLE
             diceA2.visibility = ImageView.VISIBLE
             diceA3.visibility = ImageView.VISIBLE
@@ -4405,33 +4072,33 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
 
         if ((cnt == 5) or (currentTime > endAnimationTime)) {
-            ed.getDiceText(isDouble1, isServed, diceValues, diceModus)
+            ed.getDiceText(isDouble1, isServed, diceValues, diceMode)
 
-            val oldDiceModus = diceModus
+            val oldDiceMode = diceMode
 
 
-            if (prefs.getBoolean("playOnline", false) && diceModus == 5 && !initRound) {
+            if (prefs.getBoolean("playOnline", false) && diceMode == 5 && !initRound) {
 
 //                Log.i(TAG, "animation(), return")
 
                 return
             }
 
-            if (!initRound and (diceModus < 4))
+            if (!initRound and (diceMode < 4))
                 isInitRound = true
             else {
-                if (diceModus < 2)
-                    diceModus = 2
+                if (diceMode < 2)
+                    diceMode = 2
                 else {
-                    if (diceModus < 4)
-                        diceModus++
+                    if (diceMode < 4)
+                        diceMode++
                 }
             }
 
-            if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove)) {
+            if ((diceMode == 4) and !isEnginePlayer(ed.playerToMove)) {
                 if (!ed.isSingleGame and isDouble1) {
                     isDouble1 = false
-                    diceModus = 1
+                    diceMode = 1
                     setDiceDouble1()
                     setDiceValues(true)
                     ed.getDiceText(isDouble1, isServedDouble1, diceValuesDouble1, 0)
@@ -4452,15 +4119,15 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
             diceView(diceRoll, diceHold)
 
-            if (isOnlineActive && diceModus == 5)
+            if (isOnlineActive && diceMode == 5)
                 updateTable(true)
             else
                 updateTable(false)
 
             isDicing = false
 
-            if (isEnginePlayer(ed.playerToMove) and (oldDiceModus <= 3))
-                performEngineCommands(getEngineDiceCommand(ed.playerToMove, oldDiceModus, diceRoll, diceHold, diceDouble1, isServedDouble1))
+            if (isEnginePlayer(ed.playerToMove) and (oldDiceMode <= 3))
+                performEngineCommands(getEngineDiceCommand(ed.playerToMove, oldDiceMode, diceRoll, diceHold, diceDouble1, isServedDouble1))
 
 //            Log.i(TAG, "animation(), matchDataToDb(), isOnlineActive: $isOnlineActive, isDoingTurn: $isDoingTurn")
 
@@ -4571,21 +4238,21 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         if (!isInitDelay) {
             var isSelectable = true
-            if (isEnginePlayer(ed.playerToMove) or (diceModus >= 4))
+            if (isEnginePlayer(ed.playerToMove) or (diceMode >= 4))
                 isSelectable = false
             setDiceValues(false)
             val playerInfo = ed.getDiceResult(isServed, diceValues)
             var doubleState = 0
             var playerInfoDouble = ""
 
-//            Log.i(TAG, "A animationDiceBoard(), isDouble1: $isDouble1, diceModus: $diceModus, diceModusPrev: $diceModusPrev")
+//            Log.i(TAG, "A animationDiceBoard(), isDouble1: $isDouble1, diceMode: $diceMode, diceModePrev: $diceModePrev")
 
             if (!ed.isSingleGame) {
-                if (isDouble1 and (diceModus >= 1) and (diceModus <= 3))
+                if (isDouble1 and (diceMode >= 1) and (diceMode <= 3))
                     doubleState = 1
                 if (!isDouble1) {
                     doubleState =
-                        if ((diceModus == 1) and ((diceModusPrev == 2) or (diceModusPrev == 3)))
+                        if ((diceMode == 1) and ((diceModePrev == 2) or (diceModePrev == 3)))
                             1
                         else
                             2
@@ -4600,10 +4267,10 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
             var playerToMove = ed.playerToMove
             if (prefs.getBoolean("playOnline", false)) {
-                if (diceModus == 1 && diceModusPrev == 4)  // turn !
+                if (diceMode == 1 && diceModePrev == 4)  // turn !
                     playerToMove = ed.prevPlayerToMove
             } else {
-                if (diceModus == 5)
+                if (diceMode == 5)
                     playerToMove = ed.prevPlayerToMove
             }
 
@@ -4632,9 +4299,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             diceBoard.setRoundValues(ed.colValues, ed.isSingleGame, playerToMove, playerInfo, playerInfoDouble, players)
 
-//            Log.d(TAG, "3 animationDiceBoard(), diceModus: $diceModus, diceModusCheckRoll: $diceModusCheckRoll")
+//            Log.d(TAG, "3 animationDiceBoard(), diceMode: $diceMode, diceModeCheckRoll: $diceModeCheckRoll")
 
-            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceModus == diceModusCheckRoll)
+            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceMode == diceModeCheckRoll)
                 initRollValues = false
 
 //            Log.i(TAG, "4 animationDiceBoard(), initRollValues: $initRollValues, isConfigurationChanged: $isConfigurationChanged")
@@ -4644,12 +4311,12 @@ class MainActivity : Activity(), View.OnTouchListener {
                 isConfigurationChanged = false
             }
 
-            diceModusCheckRoll = diceModus
+            diceModeCheckRoll = diceMode
 
             diceBoard.updateBoard(diceRoll, diceHold, diceDouble1, isSelectable, doubleState, initRollValues)
 
             if (diceBoard.mBoardWidth <= 0 || diceBoard.mBoardHeight <= 0) {
-                diceModusCheckRoll = -1
+                diceModeCheckRoll = -1
             }
 
             initRollValues = true
@@ -4663,7 +4330,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             if (prefs.getBoolean("playOnline", false))
                 setOnlineMessage()
             else {
-                if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove)) {
+                if ((diceMode == 4) and !isEnginePlayer(ed.playerToMove)) {
                     if (!ed.isSingleGame and isDouble1)
                         btnDice.visibility = ImageView.VISIBLE
                     else
@@ -4683,18 +4350,18 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
         }
         isInitDelay = false
-        ed.getDiceText(isDouble1, isServed, diceValues, diceModus)
-        val oldDiceModus = diceModus
-        if (diceModus < 2)
-            diceModus = 2
+        ed.getDiceText(isDouble1, isServed, diceValues, diceMode)
+        val oldDiceMode = diceMode
+        if (diceMode < 2)
+            diceMode = 2
         else {
-            if (diceModus < 4)
-                diceModus++
+            if (diceMode < 4)
+                diceMode++
         }
-        if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove)) {
+        if ((diceMode == 4) and !isEnginePlayer(ed.playerToMove)) {
             if (!ed.isSingleGame and isDouble1) {
                 isDouble1 = false
-                diceModus = 1
+                diceMode = 1
                 setDiceDouble1()
                 setDiceValues(true)
                 ed.getDiceText(isDouble1, isServedDouble1, diceValuesDouble1, 0)
@@ -4718,8 +4385,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         updateTable(false)
         isDicing = false
 
-        if (isEnginePlayer(ed.playerToMove) and (oldDiceModus <= 3) and ((diceRoll[0] >= 0) or (diceHold[0] >= 0)))
-            performEngineCommands(getEngineDiceCommand(ed.playerToMove, oldDiceModus, diceRoll, diceHold, diceDouble1, isServedDouble1))
+        if (isEnginePlayer(ed.playerToMove) and (oldDiceMode <= 3) and ((diceRoll[0] >= 0) or (diceHold[0] >= 0)))
+            performEngineCommands(getEngineDiceCommand(ed.playerToMove, oldDiceMode, diceRoll, diceHold, diceDouble1, isServedDouble1))
 
         if (prefs.getBoolean("playOnline", false) && isOnlineActive && isDoingTurn) {
 
@@ -4753,18 +4420,18 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         if (!isInitDelay) {
             var isSelectable = true
-            if (isEnginePlayer(ed.playerToMove) or (diceModus >= 4))
+            if (isEnginePlayer(ed.playerToMove) or (diceMode >= 4))
                 isSelectable = false
             setDiceValues(false)
             val playerInfo = ed.getDiceResult(isServed, diceValues)
             var doubleState = 0
             var playerInfoDouble = ""
             if (!ed.isSingleGame) {
-                if (isDouble1 and (diceModus >= 1) and (diceModus <= 3))
+                if (isDouble1 and (diceMode >= 1) and (diceMode <= 3))
                     doubleState = 1
                 if (!isDouble1) {
                     doubleState =
-                            if ((diceModus == 1) and ((diceModusPrev == 2) or (diceModusPrev == 3)))
+                            if ((diceMode == 1) and ((diceModePrev == 2) or (diceModePrev == 3)))
                                 1
                             else
                                 2
@@ -4776,10 +4443,10 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
             var playerToMove = ed.playerToMove
             if (prefs.getBoolean("playOnline", false)) {
-                if (diceModus == 1 && diceModusPrev == 4)  // turn !
+                if (diceMode == 1 && diceModePrev == 4)  // turn !
                     playerToMove = ed.prevPlayerToMove
             } else {
-                if (diceModus == 5)
+                if (diceMode == 5)
                     playerToMove = ed.prevPlayerToMove
             }
 
@@ -4804,13 +4471,13 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             diceBoard.setRoundValues(ed.colValues, ed.isSingleGame, playerToMove, playerInfo, playerInfoDouble, players)
 
-//            Log.d(TAG, "3 initBoard(), diceModus: $diceModus, diceModusCheckRoll: $diceModusCheckRoll")
+//            Log.d(TAG, "3 initBoard(), diceMode: $diceMode, diceModeCheckRoll: $diceModeCheckRoll")
 
-            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceModus == diceModusCheckRoll)
+            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceMode == diceModeCheckRoll)
                 initRollValues = false
-            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceModusCheckRoll == -1)
+            if (prefs.getBoolean("playOnline", false) && !isDoingTurn && diceModeCheckRoll == -1)
                 initRollValues = true
-            diceModusCheckRoll = diceModus
+            diceModeCheckRoll = diceMode
 
             diceBoard.updateBoard(diceRoll, diceHold, diceDouble1, isSelectable, doubleState, initRollValues)
             initRollValues = true
@@ -4824,7 +4491,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         if (prefs.getBoolean("playOnline", false))
             setOnlineMessage()
         else {
-            if ((diceModus == 4) and !isEnginePlayer(ed.playerToMove)) {
+            if ((diceMode == 4) and !isEnginePlayer(ed.playerToMove)) {
                 if (!ed.isSingleGame and isDouble1)
                     btnDice.visibility = ImageView.VISIBLE
                 else
@@ -4858,11 +4525,11 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             tableView.updateTable(ed, false, isOnlineActive)
 
-//            Log.d(TAG, "A updateTable(), diceModus: $diceModus")
+//            Log.d(TAG, "A updateTable(), diceMode: $diceMode")
 
             ed.setPlayerToMove(getEngineName(isEnginePlayer(ed.nextPlayerToMove)))
 
-//            Log.d(TAG, "B updateTable(), ed.playerToMove: " + ed.playerToMove + ", diceModus: " + diceModus)
+//            Log.d(TAG, "B updateTable(), ed.playerToMove: " + ed.playerToMove + ", diceMode: " + diceMode)
 
             if (!isOnlineEntry)
                 setBtnPlayer(ed.playerToMove)
@@ -4978,34 +4645,44 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private fun showMainDialog() {
+
+        val onlineIcon = dialogMain.findViewById<ImageView>(R.id.onlineIcon)
+        val onlineText = dialogMain.findViewById<TextView>(R.id.onlineText)
+        val offlineIcon = dialogMain.findViewById<ImageView>(R.id.offlineIcon)
+        val offlineText = dialogMain.findViewById<TextView>(R.id.offlineText)
+        val adsIcon = dialogMain.findViewById<ImageView>(R.id.adsIcon)
+        val adsText = dialogMain.findViewById<TextView>(R.id.adsText)
+        val exitIcon = dialogMain.findViewById<ImageView>(R.id.exitIcon)
+        val exitText = dialogMain.findViewById<TextView>(R.id.exitText)
+
         dialogMain.setCancelable(true)
-        dialogMain.onlineIcon.setOnClickListener {
+        onlineIcon.setOnClickListener {
             playOnline(false)
             dialogMain.dismiss()
         }
-        dialogMain.onlineText.setOnClickListener {
+        onlineText.setOnClickListener {
             playOnline(false)
             dialogMain.dismiss()
         }
-        dialogMain.offlineIcon.setOnClickListener {
+        offlineIcon.setOnClickListener {
             playOffline(true)
             dialogMain.dismiss()
         }
-        dialogMain.offlineText.setOnClickListener {
+        offlineText.setOnClickListener {
             playOffline(true)
             dialogMain.dismiss()
         }
-        dialogMain.adsIcon.setOnClickListener {
+        adsIcon.setOnClickListener {
             showAds()
         }
-        dialogMain.adsText.setOnClickListener {
+        adsText.setOnClickListener {
             showAds()
         }
-        dialogMain.exitIcon.setOnClickListener {
+        exitIcon.setOnClickListener {
             dialogMain.dismiss()
             finishApp(true)
         }
-        dialogMain.exitText.setOnClickListener {
+        exitText.setOnClickListener {
             dialogMain.dismiss()
             finishApp(true)
         }
@@ -5072,8 +4749,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 setDataUpdate()
                 initRunPrefs()
                 initDiceArrays()
-                diceModus = 0
-                diceModusPrev = 0
+                diceMode = 0
+                diceModePrev = 0
             }
 
             diceView(diceRoll, diceHold)
@@ -5087,74 +4764,93 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         if (prefs.getBoolean("advertising", true)) {
             val timeStamp = System.currentTimeMillis()
-            if (timeStamp - prefs.getLong("adsDelay", 0L) >= ADS_DELAY) {
+            if (timeStamp - prefs.getLong("adsDelay", 0L) >= ADS_DELAY && mRewardedAd != null) {
 
 //                Log.d(TAG, "showAds(), timeStamp: " + timeStamp + ", adsDelay" + prefs.getLong("adsDelay", 0L) + ", ADS_DELAY: " + ADS_DELAY)
 
-                if (mRewardedAd.isLoaded) {
-                    val activityContext: Activity = this
-                    val adCallback = object: RewardedAdCallback() {
-                        override fun onRewardedAdOpened() {
+                mRewardedAd?.fullScreenContentCallback = object: FullScreenContentCallback() {
+                    override fun onAdShowedFullScreenContent() {
 
-                        }
-                        override fun onRewardedAdClosed() {
+//                        Log.d(TAG, "showAds(), onAdShowedFullScreenContent()")
 
-                            val ed = prefs.edit()
-                            ed.putLong("adsDelay", timeStamp)
-                            ed.apply()
-
-//                            Log.d(TAG, "showAds(), onRewardedAdClosed()")
-
-//                            loadRewardedVideoAd()
-
-                        }
-                        override fun onUserEarnedReward(p0: com.google.android.gms.ads.rewarded.RewardItem) {
-
-                            if (mPlayerId != null && p0.amount > 0) {
-                                var getEp = ((System.currentTimeMillis() - startAds) / DELAY_TIME_ADS_EP) + ADS_EP_MIN
-                                if (getEp > ADS_EP_MAX)
-                                    getEp = ADS_EP_MAX
-                                val sum = mPlayerEp + getEp
-
-//                                Log.d(TAG, "showAds(), mPlayerEp: $mPlayerEp, getEp: $getEp")
-
-                                val newEp = "${getString(R.string.escaleroPoints)}:\n\n$mPlayerEp + $getEp = $sum EP"
-                                showInfoDialog(getString(R.string.info), newEp, getString(R.string.ok))
-                                updatePlayerEp(mPlayerId!!, getEp)
-
-                            }
-
-                        }
-                        override fun onRewardedAdFailedToShow(errorCode: Int) {
-
-                        }
                     }
 
-                    startAds = System.currentTimeMillis()
+                    override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
 
-                    mRewardedAd.show(activityContext, adCallback)
+//                        Log.d(TAG, "showAds(), onAdFailedToShowFullScreenContent()")
 
+                    }
+
+                    override fun onAdDismissedFullScreenContent() {
+
+                        val ed = prefs.edit()
+                        ed.putLong("adsDelay", timeStamp)
+                        ed.apply()
+
+//                        Log.d(TAG, "showAds(), onAdDismissedFullScreenContent()")
+
+                        loadRewardedVideoAd()
+
+                    }
+                }
+
+                mRewardedAd?.show(this) { rewardItem ->
+
+                    val rewardAmount = rewardItem.amount
+
+//                    Log.d(TAG, "showAds(), rewardAmount: $rewardAmount, mPlayerId: $mPlayerId")
+
+                    if (mPlayerId != null && rewardAmount > 0) {
+                        var getEp =
+                            ((System.currentTimeMillis() - startAds) / DELAY_TIME_ADS_EP) + ADS_EP_MIN
+                        if (getEp > ADS_EP_MAX)
+                            getEp = ADS_EP_MAX
+                        if (mPlayerEp >= 100)
+                            getEp = ADS_EP_1
+                        val sum = mPlayerEp + getEp
+
+//                        Log.d(TAG, "showAds(), mPlayerEp: $mPlayerEp, getEp: $getEp")
+
+                        val newEp =
+                            "${getString(R.string.escaleroPoints)}:\n\n$mPlayerEp + $getEp = $sum EP"
+                        showInfoDialog(
+                            getString(R.string.info),
+                            newEp,
+                            getString(R.string.ok)
+                        )
+                        updatePlayerEp(mPlayerId!!, getEp)
+                    }
                 }
 
             }
-            else
+            else {
                 Toast.makeText(applicationContext, getString(R.string.currentlyNoAds), Toast.LENGTH_LONG).show()
-        }
+            }
 
+        }
     }
 
     private fun showMatchDialog(matchList: ArrayList<MatchList>, setAllChecked: Boolean) {
         if (!checkConnectivity(false))
             return
 
-        dialogMatch.matchPlayer.text = getString(R.string.player)
-        dialogMatch.matchStatus.text = mPlayerName
-        dialogMatch.matchListView.visibility = ListView.VISIBLE
-        dialogMatch.matchEmpty.visibility = ImageView.INVISIBLE
+        val matchPlayer = dialogMatch.findViewById<TextView>(R.id.matchPlayer)
+        val matchStatus = dialogMatch.findViewById<TextView>(R.id.matchStatus)
+        val matchListView = dialogMatch.findViewById<ListView>(R.id.matchListView)
+        val matchEmpty = dialogMatch.findViewById<TextView>(R.id.matchEmpty)
+        val matchCheckBoxAll = dialogMatch.findViewById<CheckBox>(R.id.matchCheckBoxAll)
+        val matchBack = dialogMatch.findViewById<TextView>(R.id.matchBack)
+        val matchDelete = dialogMatch.findViewById<TextView>(R.id.matchDelete)
+        val matchView = dialogMatch.findViewById<TextView>(R.id.matchView)
+
+        matchPlayer.text = getString(R.string.player)
+        matchStatus.text = mPlayerName
+        matchListView.visibility = ListView.VISIBLE
+        matchEmpty.visibility = ImageView.INVISIBLE
         matchCheckAll = setAllChecked
         dialogMatch.setCancelable(true)
-        dialogMatch.matchCheckBoxAll.isChecked = setAllChecked
-        dialogMatch.matchCheckBoxAll.setOnCheckedChangeListener { _, isChecked ->
+        matchCheckBoxAll.isChecked = setAllChecked
+        matchCheckBoxAll.setOnCheckedChangeListener { _, isChecked ->
             matchCheckAll = isChecked
             if (isChecked) {
                 for (i in matchList.indices) {
@@ -5171,28 +4867,28 @@ class MainActivity : Activity(), View.OnTouchListener {
 //        Log.d(TAG, "showMatchDialog(), matchList.size: ${matchList.size}")
 
         val adapter = MatchListAdapter(this, matchList)
-        dialogMatch.matchListView.adapter = adapter
-        val lastViewItemIndex = dialogMatch.matchListView.lastVisiblePosition
-        dialogMatch.matchListView.setSelection(lastViewItemIndex)
-        dialogMatch.matchListView.onItemClickListener = AdapterView.OnItemClickListener { _, _, x, _ ->
+        matchListView.adapter = adapter
+        val lastViewItemIndex = matchListView.lastVisiblePosition
+        matchListView.setSelection(lastViewItemIndex)
+        matchListView.onItemClickListener = AdapterView.OnItemClickListener { _, _, x, _ ->
             matchList[x].selected = !matchList[x].selected
-            val firstViewItemIndex = dialogMatch.matchListView.firstVisiblePosition
-            showMatchDialog(matchList, dialogMatch.matchCheckBoxAll.isChecked)
-            dialogMatch.matchListView.setSelection(firstViewItemIndex)
+            val firstViewItemIndex = matchListView.firstVisiblePosition
+            showMatchDialog(matchList, matchCheckBoxAll.isChecked)
+            matchListView.setSelection(firstViewItemIndex)
         }
 
         if (matchList.isEmpty()) {
-            dialogMatch.matchListView.adapter = MatchListAdapter(this, matchList)
-            dialogMatch.matchListView.visibility = ListView.INVISIBLE
-            dialogMatch.matchEmpty.visibility = ImageView.VISIBLE
-            dialogMatch.matchCheckBoxAll.isChecked = false
+            matchListView.adapter = MatchListAdapter(this, matchList)
+            matchListView.visibility = ListView.INVISIBLE
+            matchEmpty.visibility = ImageView.VISIBLE
+            matchCheckBoxAll.isChecked = false
             matchCheckAll = false
         }
 
-        dialogMatch.matchBack.setOnClickListener {
+        matchBack.setOnClickListener {
             dialogMatch.dismiss()
         }
-        dialogMatch.matchDelete.setOnClickListener {
+        matchDelete.setOnClickListener {
 
 //            Log.d(TAG, "showMatchDialog(), allMatchList.size: ${matchList.size}")
 
@@ -5212,9 +4908,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                     GlobalScope.launch(Dispatchers.Main) {
                         val matchId = matchList[i].matchId
-                        val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                        val mbd = defferedGetMatchBaseData.await()
-                        defferedGetMatchBaseData.cancel()
+                        val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+                        val mbd = deferredGetMatchBaseData.await()
+                        deferredGetMatchBaseData.cancel()
 
 //                        Log.d(TAG, "showMatchDialog(), matchId: $matchId, mbd: $mbd")
 
@@ -5240,7 +4936,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
 
         // continue match
-        dialogMatch.matchView.setOnClickListener {
+        matchView.setOnClickListener {
 
             var isSelected = false
             var matchId = ""
@@ -5264,34 +4960,34 @@ class MainActivity : Activity(), View.OnTouchListener {
                         if (refMatch != null && refMatchListener != null)
                             refMatch!!.removeEventListener(refMatchListener!!)
 
-                        val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                        mMatchBaseData = defferedGetMatchBaseData.await()
-                        defferedGetMatchBaseData.cancel()
-                        val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-                        mMatchUpdateData = defferedGetMatchUpdateData.await()
-                        defferedGetMatchUpdateData.cancel()
+                        val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+                        mMatchBaseData = deferredGetMatchBaseData.await()
+                        deferredGetMatchBaseData.cancel()
+                        val deferredGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+                        mMatchUpdateData = deferredGetMatchUpdateData.await()
+                        deferredGetMatchUpdateData.cancel()
                         if (mMatchBaseData != null && mMatchUpdateData != null) {
                             mMatchId = matchId
 
-                            val defferedGetMatchTimestamp = async { getMatchTimestamp(matchId) }
-                            val timestamp = defferedGetMatchTimestamp.await().toLong()
-                            defferedGetMatchTimestamp.cancel()
+                            val deferredGetMatchTimestamp = async { getMatchTimestamp(matchId) }
+                            val timestamp = deferredGetMatchTimestamp.await().toLong()
+                            deferredGetMatchTimestamp.cancel()
 
                             mTimestampPre = timestamp
                             mMatchUpdateData!!.onlineAction = ONLINE_GAME_CONTINUE
                             if (mPlayerId == mMatchBaseData!!.playerIdA!!) {
-                                mOponentId = mMatchBaseData!!.playerIdB!!
-                                mOponentName = mMatchBaseData!!.nameB
-                                mOponentABC = "B"
+                                mOpponentId = mMatchBaseData!!.playerIdB!!
+                                mOpponentName = mMatchBaseData!!.nameB
+                                mOpponentABC = "B"
                                 mPlayerABC = "A"
-                                setOponentData(mMatchBaseData!!.playerIdB!!, "B")
+                                setOpponentData(mMatchBaseData!!.playerIdB!!, "B")
                             }
                             else {
-                                mOponentId = mMatchBaseData!!.playerIdA!!
-                                mOponentName = mMatchBaseData!!.nameA
-                                mOponentABC = "A"
+                                mOpponentId = mMatchBaseData!!.playerIdA!!
+                                mOpponentName = mMatchBaseData!!.nameA
+                                mOpponentABC = "A"
                                 mPlayerABC = "B"
-                                setOponentData(mMatchBaseData!!.playerIdA!!, "A")
+                                setOpponentData(mMatchBaseData!!.playerIdA!!, "A")
                             }
                             var actionId = "3"
                             if (mMatchUpdateData!!.turnPlayerId!! != mPlayerId)
@@ -5304,16 +5000,16 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                            Log.d(TAG, "4 showMatchDialog(), actionId: $actionId")
 
-                            val defferedGetUserData = async { getUserData(mOponentId!!) }
-                            val user = defferedGetUserData.await()
-                            defferedGetUserData.cancel()
+                            val deferredGetUserData = async { getUserData(mOpponentId!!) }
+                            val user = deferredGetUserData.await()
+                            deferredGetUserData.cancel()
 
                             if (user != null) {
 
 //                                Log.d(TAG, "4 showMatchDialog(), user.currentMatchId: ${user.currentMatchId}, user.playing: ${user.playing}")
 
                                 if (user.notifications!! && (!user.playing!! || (user.playing!! && user.currentMatchId == matchId))) {
-                                    continueMatchNotification(actionId, mMatchId!!, mOponentId!!, mOponentName!!, mMatchBaseData!!.nameA!!, mMatchBaseData!!.nameB!!)
+                                    continueMatchNotification(actionId, mMatchId!!, mOpponentId!!, mOpponentName!!, mMatchBaseData!!.nameA!!, mMatchBaseData!!.nameB!!)
                                     mIsContinueMatch = true
                                     matchUpdate(mMatchUpdateData!!)
                                     startMatchUpdateListener(mMatchId!!)
@@ -5350,9 +5046,13 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private fun showInfoDialog(mesTitle: String, mes: String, action: String) {
-        dialogInfo.mesTitle.text = mesTitle
-        dialogInfo.mes.text = mes
-        dialogInfo.messageAction.text = action
+        val title = dialogInfo.findViewById<TextView>(R.id.mesTitle)
+        val message = dialogInfo.findViewById<TextView>(R.id.mes)
+        val messageAction = dialogInfo.findViewById<TextView>(R.id.messageAction)
+
+        title.text = mesTitle
+        message.text = mes
+        messageAction.text = action
         dialogInfo.setCancelable(true)
         dialogInfo.setOnCancelListener {
             if (dialogInfo.isShowing)
@@ -5360,7 +5060,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             if (dialogCurrentMatch.isShowing)
                 dialogCurrentMatch.dismiss()
         }
-        dialogInfo.messageAction.setOnClickListener {
+        messageAction.setOnClickListener {
             if (dialogInfo.isShowing)
                 dialogInfo.dismiss()
             if (dialogCurrentMatch.isShowing)
@@ -5374,16 +5074,20 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun showContinueMatchDialog(matchId: String, actionId: String) {
 
 //        Log.d(TAG, "showContinueMatchDialog(), matchId: $matchId, actionId: $actionId")
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
 
         GlobalScope.launch(Dispatchers.Main) {
 
             mMatchId = matchId
-            val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-            mMatchBaseData = defferedGetMatchBaseData.await()
-            defferedGetMatchBaseData.cancel()
-            val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-            mMatchUpdateData = defferedGetMatchUpdateData.await()
-            defferedGetMatchUpdateData.cancel()
+            val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+            mMatchBaseData = deferredGetMatchBaseData.await()
+            deferredGetMatchBaseData.cancel()
+            val deferredGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+            mMatchUpdateData = deferredGetMatchUpdateData.await()
+            deferredGetMatchUpdateData.cancel()
 
             if (mMatchBaseData != null && mMatchUpdateData != null) {
 
@@ -5393,23 +5097,23 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
                 var gameType = ""
                 if (!mMatchBaseData!!.singleGame!!)
-                    gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
-                val defferedTimestamp = async { getTimestampFromServer() }
-                val serverTimestamp = defferedTimestamp.await().toLong()
-                defferedTimestamp.cancel()
-                val defferedGetMatchTimestamp = async { getMatchTimestamp(matchId) }
-                val matchTimestamp = defferedGetMatchTimestamp.await().toLong()
-                defferedGetMatchTimestamp.cancel()
+                    gameType = getString(R.string.typeDouble).uppercase((Locale.ROOT))
+                val deferredTimestamp = async { getTimestampFromServer() }
+                val serverTimestamp = deferredTimestamp.await().toLong()
+                deferredTimestamp.cancel()
+                val deferredGetMatchTimestamp = async { getMatchTimestamp(matchId) }
+                val matchTimestamp = deferredGetMatchTimestamp.await().toLong()
+                deferredGetMatchTimestamp.cancel()
                 val time = getUpdateTime(matchTimestamp, serverTimestamp)
                 var type = ""
                 if (!mMatchBaseData!!.singleGame!!)
                     type = "($gameType)"
                 val title = "${getString(R.string.continueMatchTitle)} $type \n$time"
-                dialogTwoBtn.mes2Title.text = title
+                mes2Title.text = title
                 val players = "${mMatchBaseData!!.nameA} - ${mMatchBaseData!!.nameB}"
-                dialogTwoBtn.mes2.text = players
-                dialogTwoBtn.action1.text = getString(R.string.reject)
-                dialogTwoBtn.action2.text = getString(R.string.continuation)
+                mes2.text = players
+                action1.text = getString(R.string.reject)
+                action2.text = getString(R.string.continuation)
                 dialogTwoBtn.setCancelable(true)
                 dialogTwoBtn.setOnCancelListener {
                     dialogTwoBtn.dismiss()
@@ -5420,7 +5124,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                     initOnline()
                     setNoActiveMatch()
                 }
-                dialogTwoBtn.action1.setOnClickListener {
+                action1.setOnClickListener {
                     GlobalScope.launch(Dispatchers.Main) {
                         dialogTwoBtn.dismiss()
                         initOnline()
@@ -5428,8 +5132,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                     }
 
                 }
-                dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectangleyellow)
-                dialogTwoBtn.action2.setOnClickListener {
+                action2.setBackgroundResource(R.drawable.rectangleyellow)
+                action2.setOnClickListener {
 
                     continueOnlineMatch(actionId)
 
@@ -5443,8 +5147,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                     }
 
                 }
-                dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-                dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+                action1.visibility = ImageView.VISIBLE
+                action2.visibility = ImageView.VISIBLE
 
                 dialogTwoBtn.show()
 
@@ -5452,117 +5156,144 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
     }
 
-    private fun showPlayerQueryDialog(user: User, mesTitle: String, mes: String, action1: String, action2: String) {
+    private fun showPlayerQueryDialog(user: User, mesTitle: String, mes: String, action1a: String, action2a: String) {
 
-        dialogTwoBtn.mes2Title.text = mesTitle
-        dialogTwoBtn.mes2.text = mes
-        dialogTwoBtn.action1.text = action1
-        dialogTwoBtn.action2.text = action2
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        mes2Title.text = mesTitle
+        mes2.text = mes
+        action1.text = action1a
+        action2.text = action2a
         dialogTwoBtn.setCancelable(true)
         dialogTwoBtn.setOnCancelListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setOnClickListener {
             dialogTwoBtn.dismiss()
             invitePlayer(user)
         }
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
         if (!isFinishing)
             dialogTwoBtn.show()
     }
 
-    private fun showRemoveQuickMatchDialog(mesTitle: String, mes: String, action1: String, action2: String) {
+    private fun showRemoveQuickMatchDialog(mesTitle: String, mes: String, action1a: String, action2a: String) {
 
-        dialogTwoBtn.mes2Title.text = mesTitle
-        dialogTwoBtn.mes2.text = mes
-        dialogTwoBtn.action1.text = action1
-        dialogTwoBtn.action2.text = action2
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        mes2Title.text = mesTitle
+        mes2.text = mes
+        action1.text = action1a
+        action2.text = action2a
         dialogTwoBtn.setCancelable(true)
         dialogTwoBtn.setOnCancelListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setOnClickListener {
             dialogTwoBtn.dismiss()
             GlobalScope.launch(Dispatchers.Main) {
-                val defferedSetQuickMatchUserId = async { setQuickMatchUserId("0") }
-                defferedSetQuickMatchUserId.await()
-                defferedSetQuickMatchUserId.cancel()
+                val deferredSetQuickMatchUserId = async { setQuickMatchUserId("0") }
+                deferredSetQuickMatchUserId.await()
+                deferredSetQuickMatchUserId.cancel()
                 Toast.makeText(applicationContext, getString(R.string.removedQuickMatch), Toast.LENGTH_LONG).show()
             }
         }
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
         if (!isFinishing)
             dialogTwoBtn.show()
     }
 
     private fun showMultipleRegisteredDialog() {
 
-        dialogTwoBtn.mes2Title.text = getString(R.string.warningTitle)
-        dialogTwoBtn.mes2.text = getString(R.string.multipleRegistered)
-        dialogTwoBtn.action1.text = getString(R.string.appContinue)
-        dialogTwoBtn.action2.text = getString(R.string.appExit)
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        mes2Title.text = getString(R.string.warningTitle)
+        mes2.text = getString(R.string.multipleRegistered)
+        action1.text = getString(R.string.appContinue)
+        action2.text = getString(R.string.appExit)
         dialogTwoBtn.setCancelable(false)
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setOnClickListener {
             dialogTwoBtn.dismiss()
             finishApp(false)
         }
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
         if (!isFinishing)
             dialogTwoBtn.show()
     }
 
     private fun showNoEpDialog() {
-        dialogTwoBtn.mes2Title.text = getString(R.string.warningTitle)
-        dialogTwoBtn.mes2.text = getString(R.string.noEp)
-        dialogTwoBtn.action1.text = getString(R.string.noThanks)
-        dialogTwoBtn.action2.text = getString(R.string.getEp)
+
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        mes2Title.text = getString(R.string.warningTitle)
+        mes2.text = getString(R.string.noEp)
+        action1.text = getString(R.string.noThanks)
+        action2.text = getString(R.string.getEp)
         dialogTwoBtn.setCancelable(true)
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setOnClickListener {
             dialogTwoBtn.dismiss()
             showAds()
         }
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
         if (!isFinishing)
             dialogTwoBtn.show()
     }
 
-    private fun showInvitationFromNotificatioDialog(intent: Intent) {
+    private fun showInvitationFromNotificationDialog(intent: Intent) {
+
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
         var showDialog = true
         val timestamp = intent.extras?.getString("timestamp") ?: ""
 
-//        Log.i(TAG, "showInvitationFromNotificatioDialog(), timestamp: $timestamp, notificationNoDialog: $notificationNoDialog")
+//        Log.i(TAG, "showInvitationFromNotificationDialog(), timestamp: $timestamp, notificationNoDialog: $notificationNoDialog")
 
         GlobalScope.launch(Dispatchers.Main) {
             if (timestamp.isEmpty())
-                dialogTwoBtn.mes2Title.text = getString(R.string.invitationTitle)
+                mes2Title.text = getString(R.string.invitationTitle)
             else {
 
                 val tsLong = timestamp.toLong()
-                val defferedTimestamp = async { getTimestampFromServer() }
-                val ts = defferedTimestamp.await().toLong()
-                defferedTimestamp.cancel()
+                val deferredTimestamp = async { getTimestampFromServer() }
+                val ts = deferredTimestamp.await().toLong()
+                deferredTimestamp.cancel()
                 val diffMin = (ts - tsLong) / 60000
                 @SuppressLint("SetTextI18n")
                 when (diffMin) {
-                    0L -> dialogTwoBtn.mes2Title.text = "${getString(R.string.invitationTitle)}: ${getString(R.string.justNow)}"
-                    1L -> dialogTwoBtn.mes2Title.text = "${getString(R.string.invitationTitle)}: ${getString(R.string.time)} $diffMin ${getString(R.string.minute)}"
-                    in 2L..30L -> dialogTwoBtn.mes2Title.text = "${getString(R.string.invitationTitle)}: ${getString(R.string.time)} $diffMin ${getString(R.string.minutes)}"
+                    0L -> mes2Title.text = "${getString(R.string.invitationTitle)}: ${getString(R.string.justNow)}"
+                    1L -> mes2Title.text = "${getString(R.string.invitationTitle)}: ${getString(R.string.time)} $diffMin ${getString(R.string.minute)}"
+                    in 2L..30L -> mes2Title.text = "${getString(R.string.invitationTitle)}: ${getString(R.string.time)} $diffMin ${getString(R.string.minutes)}"
                     else -> showDialog = false
                 }
             }
@@ -5571,27 +5302,27 @@ class MainActivity : Activity(), View.OnTouchListener {
                 return@launch
 
             val fbUserId = intent.extras?.getString("fromUserId") ?: ""
-            val defferedGetUserData = async { getUserData(fbUserId) }
-            val user = defferedGetUserData.await()
-            defferedGetUserData.cancel()
+            val deferredGetUserData = async { getUserData(fbUserId) }
+            val user = deferredGetUserData.await()
+            deferredGetUserData.cancel()
             var gameType = ""
             if (user != null && !user.singleGame!!)
-                gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
+                gameType = getString(R.string.typeDouble).uppercase((Locale.ROOT))
 
-            dialogTwoBtn.mes2.text = getString(R.string.playerInvitation, intent.extras?.getString("fromUsername")
+            mes2.text = getString(R.string.playerInvitation, intent.extras?.getString("fromUsername")
                     ?: "", gameType)
-            dialogTwoBtn.action1.text = getString(R.string.reject)
-            dialogTwoBtn.action2.text = getString(R.string.accept)
+            action1.text = getString(R.string.reject)
+            action2.text = getString(R.string.accept)
             dialogTwoBtn.setCancelable(true)
             dialogTwoBtn.setOnCancelListener {
                 dialogTwoBtn.dismiss()
                 notificationIntent = null
             }
-            dialogTwoBtn.action1.setOnClickListener {
+            action1.setOnClickListener {
                 dialogTwoBtn.dismiss()
                 notificationIntent = null
             }
-            dialogTwoBtn.action2.setOnClickListener {
+            action2.setOnClickListener {
                 dialogTwoBtn.dismiss()
                 dialogInfo.dismiss()
                 dismissAllDialogs()
@@ -5600,8 +5331,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                     initMatch(inviterUserId)
                 notificationIntent = null
             }
-            dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-            dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+            action1.visibility = ImageView.VISIBLE
+            action2.visibility = ImageView.VISIBLE
             if (!isFinishing)
                 dialogTwoBtn.show()
 
@@ -5609,40 +5340,45 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     }
 
-    private fun showOfflineInvitationFromNotificatioDialog(intent: Intent) {
+    private fun showOfflineInvitationFromNotificationDialog(intent: Intent) {
+
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
 
         GlobalScope.launch(Dispatchers.Main) {
             var title = getString(R.string.invitationTitle)
 
             val fbUserId = intent.extras?.getString("fromUserId") ?: ""
-            val defferedGetUserData = async { getUserData(fbUserId) }
-            val user = defferedGetUserData.await()
-            defferedGetUserData.cancel()
+            val deferredGetUserData = async { getUserData(fbUserId) }
+            val user = deferredGetUserData.await()
+            deferredGetUserData.cancel()
             var gameType = ""
             if (user != null && !user.singleGame!!)
-                gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
+                gameType = getString(R.string.typeDouble).uppercase((Locale.ROOT))
 
             var mes = getString(R.string.playerInvitation, intent.extras?.getString("fromUsername")
                     ?: "", gameType)
             val actionId = intent.extras?.getString("actionId") ?: ""
             val matchId = intent.extras?.getString("matchId") ?: ""
 
-//            Log.i(TAG, "showOfflineInvitationFromNotificatioDialog(), matchId: $matchId, actionId: $actionId")
+//            Log.i(TAG, "showOfflineInvitationFromNotificationDialog(), matchId: $matchId, actionId: $actionId")
 
             var showDialog = false
 
             if (matchId.isNotEmpty() && (actionId == "3" || actionId == "4")) {
                 val fromUsername = intent.extras?.getString("fromUsername") ?: ""
-                val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                val baseData = defferedGetMatchBaseData.await()
-                defferedGetMatchBaseData.cancel()
+                val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+                val baseData = deferredGetMatchBaseData.await()
+                deferredGetMatchBaseData.cancel()
 
-                val defferedTimestamp = async { getTimestampFromServer() }
-                val serverTimestamp = defferedTimestamp.await().toLong()
-                defferedTimestamp.cancel()
-                val defferedGetMatchTimestamp = async { getMatchTimestamp(matchId) }
-                val matchTimestamp = defferedGetMatchTimestamp.await().toLong()
-                defferedGetMatchTimestamp.cancel()
+                val deferredTimestamp = async { getTimestampFromServer() }
+                val serverTimestamp = deferredTimestamp.await().toLong()
+                deferredTimestamp.cancel()
+                val deferredGetMatchTimestamp = async { getMatchTimestamp(matchId) }
+                val matchTimestamp = deferredGetMatchTimestamp.await().toLong()
+                deferredGetMatchTimestamp.cancel()
                 val time = getUpdateTime(matchTimestamp, serverTimestamp)
                 var type = ""
                 if (!mMatchBaseData!!.singleGame!!)
@@ -5660,18 +5396,18 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             if (showDialog) {
                 notificationIntent = null
-                dialogTwoBtn.mes2Title.text = title
-                dialogTwoBtn.mes2.text = mes
-                dialogTwoBtn.action1.text = getString(R.string.reject)
-                dialogTwoBtn.action2.text = getString(R.string.accept)
+                mes2Title.text = title
+                mes2.text = mes
+                action1.text = getString(R.string.reject)
+                action2.text = getString(R.string.accept)
                 dialogTwoBtn.setCancelable(true)
                 dialogTwoBtn.setOnCancelListener {
                     dialogTwoBtn.dismiss()
                 }
-                dialogTwoBtn.action1.setOnClickListener {
+                action1.setOnClickListener {
                     dialogTwoBtn.dismiss()
                 }
-                dialogTwoBtn.action2.setOnClickListener {
+                action2.setOnClickListener {
                     dialogTwoBtn.dismiss()
                     dialogInfo.dismiss()
                     dismissAllDialogs()
@@ -5682,57 +5418,62 @@ class MainActivity : Activity(), View.OnTouchListener {
                         playOnline(false)
                     }
                 }
-                dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-                dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+                action1.visibility = ImageView.VISIBLE
+                action2.visibility = ImageView.VISIBLE
                 if (!isFinishing)
                     dialogTwoBtn.show()
             }
         }
     }
 
-    private fun showInvitationFromQuickMatchDialog(userId: String, mesTitle: String, action1: String, action2: String) {
+    private fun showInvitationFromQuickMatchDialog(userId: String, mesTitle: String, action1a: String, action2a: String) {
+
+        val mes2Title = dialogQuickMatchInvitation.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogQuickMatchInvitation.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogQuickMatchInvitation.findViewById<TextView>(R.id.action1)
+        val action2 = dialogQuickMatchInvitation.findViewById<TextView>(R.id.action2)
 
 //        Log.i(TAG, "showInvitationFromQuickMatchDialog(), userId: $userId, quickMatchRejected: ${prefs.getString("quickMatchRejected", "")}")
 
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedGetUserData = async { getUserData(userId) }
-            val user = defferedGetUserData.await()
-            defferedGetUserData.cancel()
+            val deferredGetUserData = async { getUserData(userId) }
+            val user = deferredGetUserData.await()
+            deferredGetUserData.cancel()
             if (user != null) {
                 val userName = user.name ?: ""
 
 //                Log.i(TAG, "showInvitationFromQuickMatchDialog(), userName: $userName, userGpsId: $userGpsId")
 
-                dialogQuickMatchInvitation.mes2Title.text = mesTitle
+                mes2Title.text = mesTitle
                 var gameType = ""
                 if (!user.singleGame!!)
-                    gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
-                dialogQuickMatchInvitation.mes2.text = getString(R.string.playerInvitation, userName, gameType)
-                dialogQuickMatchInvitation.action1.text = action1
-                dialogQuickMatchInvitation.action2.text = action2
+                    gameType = getString(R.string.typeDouble).uppercase((Locale.ROOT))
+                mes2.text = getString(R.string.playerInvitation, userName, gameType)
+                action1.text = action1a
+                action2.text = action2a
                 dialogQuickMatchInvitation.setCancelable(true)
                 dialogQuickMatchInvitation.setOnCancelListener {
                     dialogQuickMatchInvitation.dismiss()
                 }
-                dialogQuickMatchInvitation.action1.setOnClickListener {
+                action1.setOnClickListener {
                     dialogQuickMatchInvitation.dismiss()
                 }
-                dialogQuickMatchInvitation.action2.setOnClickListener {
+                action2.setOnClickListener {
                     dialogQuickMatchInvitation.dismiss()
                     dialogInfo.dismiss()
                     dismissAllDialogs()
                     GlobalScope.launch(Dispatchers.Main) {
                         quickMatchUpdateTime = System.currentTimeMillis()
-                        val defferedSetQuickMatchUserId = async { setQuickMatchUserId("0") }
-                        defferedSetQuickMatchUserId.await()
-                        defferedSetQuickMatchUserId.cancel()
+                        val deferredSetQuickMatchUserId = async { setQuickMatchUserId("0") }
+                        deferredSetQuickMatchUserId.await()
+                        deferredSetQuickMatchUserId.cancel()
                     }
                     btnPlayerResult.text = resources.getString(R.string.waitingForPlayer, userName)
                     initMatch(userId)
 
                 }
-                dialogQuickMatchInvitation.action1.visibility = ImageView.VISIBLE
-                dialogQuickMatchInvitation.action2.visibility = ImageView.VISIBLE
+                action1.visibility = ImageView.VISIBLE
+                action2.visibility = ImageView.VISIBLE
 
                 if (!isFinishing)
                     dialogQuickMatchInvitation.show()
@@ -5742,30 +5483,35 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
     }
 
-    private fun showUpdateAppDialog(mesTitle: String, mes: String, action1: String, action2: String) {
+    private fun showUpdateAppDialog(mesTitle: String, mes: String, action1a: String, action2a: String) {
 
-        dialogTwoBtn.mes2Title.text = mesTitle
-        dialogTwoBtn.mes2.text = mes
-        dialogTwoBtn.action1.text = action1
-        dialogTwoBtn.action2.text = action2
+        val title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        title.text = mesTitle
+        mes2.text = mes
+        action1.text = action1a
+        action2.text = action2a
         dialogTwoBtn.setCancelable(true)
         dialogTwoBtn.setOnCancelListener {
             dialogTwoBtn.dismiss()
             notificationIntent = null
         }
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             dialogTwoBtn.dismiss()
             notificationIntent = null
         }
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setOnClickListener {
             dialogTwoBtn.dismiss()
             infoIntent = Intent(Intent.ACTION_VIEW)
             infoIntent.data = Uri.parse(URI_ESCALERO)
             infoIntent.setPackage("com.android.vending")
             startActivityForResult(infoIntent, INFO_REQUEST_CODE)
         }
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
         if (!isFinishing)
             dialogTwoBtn.show()
     }
@@ -5774,15 +5520,28 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun showRematchDialog(isRematch: Boolean, rmPlayerA: String, rmPlayerB: String, playerEpA: Long, playerEpB: Long, playerResultA: Long, playerResultB: Long, result: Long) {
 
 //        Log.d(TAG, "showRematchDialog(), isRematch: $isRematch, A: $rmPlayerA, B: $rmPlayerB, " +
-//                "playerEpA: $playerEpA, playerEpB: $playerEpB, playerResultA: $matchA, playerResultB: $matchB")
+//                "playerEpA: $playerEpA, playerEpB: $playerEpB, playerResultA: $playerResultA, playerResultB: $playerResultB")
+
+        val playerNames = dialogRematch.findViewById<TextView>(R.id.playerNames)
+        val playerResult = dialogRematch.findViewById<TextView>(R.id.playerResult)
+        val playerNameA = dialogRematch.findViewById<TextView>(R.id.playerNameA)
+        val playerEpOldA = dialogRematch.findViewById<TextView>(R.id.playerEpOldA)
+        val playerResultAx = dialogRematch.findViewById<TextView>(R.id.playerResultA)
+        val playerEpNewA = dialogRematch.findViewById<TextView>(R.id.playerEpNewA)
+        val playerNameB = dialogRematch.findViewById<TextView>(R.id.playerNameB)
+        val playerEpOldB = dialogRematch.findViewById<TextView>(R.id.playerEpOldB)
+        val playerResultBx = dialogRematch.findViewById<TextView>(R.id.playerResultB)
+        val playerEpNewB = dialogRematch.findViewById<TextView>(R.id.playerEpNewB)
+        val action1 = dialogRematch.findViewById<TextView>(R.id.action1)
+        val action2 = dialogRematch.findViewById<TextView>(R.id.action2)
 
         updateUserStatus(playerId = mPlayerId, playing = false, singleGame = ed.isSingleGame)
 
         if (mPlayerId != null)
             updatePlayerEp(mPlayerId!!, result)
 
-        dialogRematch.playerNames.text = "$rmPlayerA - $rmPlayerB"
-        dialogRematch.playerResult.text = ed.playerResult
+        playerNames.text = "$rmPlayerA - $rmPlayerB"
+        playerResult.text = ed.playerResult
 
         var newA = playerEpA + playerResultA
         if (newA < 0L)
@@ -5794,7 +5553,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 //        Log.d(TAG, "showRematchDialog(), A: $rmPlayerA, playerEpA: $playerEpA, playerResultA: $playerResultA, newA: $newA")
 //        Log.d(TAG, "showRematchDialog(), B: $rmPlayerB, playerEpB: $playerEpB, playerResultB: $playerResultB, newB: $newB")
 
-        mOponentEp =  if (mPlayerABC == "A")
+        mOpponentEp =  if (mPlayerABC == "A")
             newB
         else
             newA
@@ -5802,42 +5561,42 @@ class MainActivity : Activity(), View.OnTouchListener {
         diceBoard.mOnlinePlayers = "$rmPlayerA - $rmPlayerB"
         diceBoard.updateBoard(diceRoll, diceHold, diceDouble1, false, 0, initRollValues)
 
-        dialogRematch.playerNameA.text = "$rmPlayerA:"
-        dialogRematch.playerEpOldA.text = "$playerEpA"
+        playerNameA.text = "$rmPlayerA:"
+        playerEpOldA.text = "$playerEpA"
         if (playerResultA > 0L)
-            dialogRematch.playerResultA.text = "+$playerResultA"
+            playerResultAx.text = "+$playerResultA"
         else
-            dialogRematch.playerResultA.text = "$playerResultA"
-        dialogRematch.playerEpNewA.text = "$newA EP"
+            playerResultAx.text = "$playerResultA"
+        playerEpNewA.text = "$newA EP"
 
-        dialogRematch.playerNameB.text = "$rmPlayerB:"
-        dialogRematch.playerEpOldB.text = "$playerEpB"
+        playerNameB.text = "$rmPlayerB:"
+        playerEpOldB.text = "$playerEpB"
         if (playerResultB > 0L)
-            dialogRematch.playerResultB.text = "+$playerResultB"
+            playerResultBx.text = "+$playerResultB"
         else
-            dialogRematch.playerResultB.text = "$playerResultB"
-        dialogRematch.playerEpNewB.text = "$newB EP"
+            playerResultBx.text = "$playerResultB"
+        playerEpNewB.text = "$newB EP"
 
         dialogRematch.setOnCancelListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
-                    matchCanceled(mOponentId!!, mMatchId!!, "8")
-                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
+                    matchCanceled(mOpponentId!!, mMatchId!!, "8")
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOpponentId!!)
                 }
             }
             dialogRematch.dismiss()
         }
-        dialogRematch.action1.setOnClickListener {
+        action1.setOnClickListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
-                    matchCanceled(mOponentId!!, mMatchId!!, "8")
-                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
+                    matchCanceled(mOpponentId!!, mMatchId!!, "8")
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOpponentId!!)
                 }
             }
             dialogRematch.dismiss()
         }
-        dialogRematch.action2.setBackgroundResource(R.drawable.rectangleyellow)
-        dialogRematch.action2.setOnClickListener {
+        action2.setBackgroundResource(R.drawable.rectangleyellow)
+        action2.setOnClickListener {
 
 //            Log.d(TAG, "showRematchDialog(), isRematch: $isRematch, mMatchId: $mMatchId")
 
@@ -5861,39 +5620,44 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private fun showAcceptRematchDialog(isNextPlayer: Boolean, rmPlayerA: String, rmPlayerB: String) {
 
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
 //        Log.d(TAG, "showRematchDialog(), isRematch: $isRematch, A: $rmPlayerA, B: $rmPlayerB, starter: $starter")
 
-        dialogTwoBtn.mes2Title.text = getString(R.string.rematchTitle)
+        mes2Title.text = getString(R.string.rematchTitle)
         val rmPlayers = "$rmPlayerA - $rmPlayerB"
-        val rmRematch = getString(R.string.playAgain, mOponentName ?: "???")
+        val rmRematch = getString(R.string.playAgain, mOpponentName ?: "???")
 
         diceBoard.mOnlinePlayers = "$rmPlayerA - $rmPlayerB"
         diceBoard.updateBoard(diceRoll, diceHold, diceDouble1, false, 0, initRollValues)
 
         val mes = "$rmPlayers\n\n$rmRematch"
-        dialogTwoBtn.mes2.text = mes
-        dialogTwoBtn.action1.text = getString(R.string.dialogNo)
-        dialogTwoBtn.action2.text = getString(R.string.dialogYes)
+        mes2.text = mes
+        action1.text = getString(R.string.dialogNo)
+        action2.text = getString(R.string.dialogYes)
         dialogTwoBtn.setOnCancelListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
-                    matchCanceled(mOponentId!!, mMatchId!!, "8")
-                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
+                    matchCanceled(mOpponentId!!, mMatchId!!, "8")
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOpponentId!!)
                 }
             }
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             if (mMatchId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
-                    matchCanceled(mOponentId!!, mMatchId!!, "8")
-                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOponentId!!)
+                    matchCanceled(mOpponentId!!, mMatchId!!, "8")
+                    startRemoveMatch(false, mMatchId!!, mPlayerId!!, mOpponentId!!)
                 }
             }
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectangleyellow)
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setBackgroundResource(R.drawable.rectangleyellow)
+        action2.setOnClickListener {
             if (isNextPlayer) {
                 matchDataToDb(true, ONLINE_START_REMATCH)
                 btnDice.visibility = ImageView.VISIBLE
@@ -5907,8 +5671,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             dialogRematch.dismiss()
         }
         dialogTwoBtn.setCancelable(true)
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
 
         if (!isFinishing)
             dialogTwoBtn.show()
@@ -5924,9 +5688,9 @@ class MainActivity : Activity(), View.OnTouchListener {
             var isMaxScore = false
             var newScore = 0L
 
-            val defferedLeaderboardScore = async { getLeaderboardScore(playerId) }
-            val leaderboardScore = defferedLeaderboardScore.await()
-            defferedLeaderboardScore.cancel()
+            val deferredLeaderboardScore = async { getLeaderboardScore(playerId) }
+            val leaderboardScore = deferredLeaderboardScore.await()
+            deferredLeaderboardScore.cancel()
 
 //            Log.d(TAG, "updatePlayerEp(), leaderboardScore: $leaderboardScore")
 
@@ -5948,9 +5712,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                Log.d(TAG, "updatePlayerEp(), leaderboardScore: $leaderboardScore, newScore: $newScore")
 
-                val defferedUpdateLeaderboardData = async { updateLeaderboardData(playerId, ld) }
-                defferedUpdateLeaderboardData.await()
-                defferedUpdateLeaderboardData.cancel()
+                val deferredUpdateLeaderboardData = async { updateLeaderboardData(playerId, ld) }
+                deferredUpdateLeaderboardData.await()
+                deferredUpdateLeaderboardData.cancel()
 
             }
 
@@ -5966,24 +5730,30 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private fun showPauseMatchDialog() {
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
-        dialogTwoBtn.mes2Title.text = getString(R.string.info)
+
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
+        mes2Title.text = getString(R.string.info)
         if (isDoingTurn)
-            dialogTwoBtn.mes2.text = getString(R.string.finishActiveMatch)
+            mes2.text = getString(R.string.finishActiveMatch)
         else
-            dialogTwoBtn.mes2.text = getString(R.string.theirTurnPauseMatch)
-        dialogTwoBtn.action1.text = getString(R.string.appContinue)
-        dialogTwoBtn.action2.text = getString(R.string.matchPause)
+            mes2.text = getString(R.string.theirTurnPauseMatch)
+        action1.text = getString(R.string.appContinue)
+        action2.text = getString(R.string.matchPause)
         dialogTwoBtn.setCancelable(true)
         dialogTwoBtn.setOnCancelListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectangleyellow)
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setBackgroundResource(R.drawable.rectangleyellow)
+        action2.setOnClickListener {
             if (isDoingTurn) {
                     matchDataToDb(false, getPausedStatus())
                     Toast.makeText(applicationContext, getString(R.string.matchBreak), Toast.LENGTH_SHORT).show()
@@ -6004,25 +5774,31 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private fun showDeleteMatchDialog() {
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
-        dialogTwoBtn.mes2Title.text = getString(R.string.info)
-        dialogTwoBtn.mes2.text = getString(R.string.dismissMatch)
-        dialogTwoBtn.action1.text = getString(R.string.dialogNo)
-        dialogTwoBtn.action2.text = getString(R.string.dialogYes)
+
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
+        mes2Title.text = getString(R.string.info)
+        mes2.text = getString(R.string.dismissMatch)
+        action1.text = getString(R.string.dialogNo)
+        action2.text = getString(R.string.dialogYes)
         dialogTwoBtn.setCancelable(true)
         dialogTwoBtn.setOnCancelListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectangleyellow)
-        dialogTwoBtn.action2.setOnClickListener {
-            if (checkConnectivity(false) && mMatchId != null && mOponentId != null) {
+        action2.setBackgroundResource(R.drawable.rectangleyellow)
+        action2.setOnClickListener {
+            if (checkConnectivity(false) && mMatchId != null && mOpponentId != null) {
                 GlobalScope.launch(Dispatchers.Main) {
-                    matchCanceled(mOponentId!!, mMatchId!!, "9")
-                    startRemoveMatch(true, mMatchId!!, mPlayerId!!, mOponentId!!)
+                    matchCanceled(mOpponentId!!, mMatchId!!, "9")
+                    startRemoveMatch(true, mMatchId!!, mPlayerId!!, mOpponentId!!)
                 }
             }
             dialogTwoBtn.dismiss()
@@ -6032,17 +5808,23 @@ class MainActivity : Activity(), View.OnTouchListener {
     }
 
     private fun showWelcomeDialog() {
-        dialogTwoBtn.action1.visibility = ImageView.VISIBLE
-        dialogTwoBtn.action2.visibility = ImageView.VISIBLE
-        dialogTwoBtn.mes2Title.text = getString(R.string.welcome)
-        dialogTwoBtn.mes2.text = getString(R.string.welcomeText)
-        dialogTwoBtn.action1.text = getString(R.string.infoGame)
-        dialogTwoBtn.action2.text = getString(R.string.appContinue)
+
+        val mes2Title = dialogTwoBtn.findViewById<TextView>(R.id.mes2Title)
+        val mes2 = dialogTwoBtn.findViewById<TextView>(R.id.mes2)
+        val action1 = dialogTwoBtn.findViewById<TextView>(R.id.action1)
+        val action2 = dialogTwoBtn.findViewById<TextView>(R.id.action2)
+
+        action1.visibility = ImageView.VISIBLE
+        action2.visibility = ImageView.VISIBLE
+        mes2Title.text = getString(R.string.welcome)
+        mes2.text = getString(R.string.welcomeText)
+        action1.text = getString(R.string.infoGame)
+        action2.text = getString(R.string.appContinue)
         dialogTwoBtn.setCancelable(true)
         dialogTwoBtn.setOnCancelListener {
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action1.setOnClickListener {
+        action1.setOnClickListener {
             infoIntent = Intent(Intent.ACTION_VIEW)
             val currentLang = Locale.getDefault().language
             infoIntent.data =
@@ -6053,8 +5835,8 @@ class MainActivity : Activity(), View.OnTouchListener {
             startActivityForResult(infoIntent, INFO_REQUEST_CODE)
             dialogTwoBtn.dismiss()
         }
-        dialogTwoBtn.action2.setBackgroundResource(R.drawable.rectangleyellow)
-        dialogTwoBtn.action2.setOnClickListener {
+        action2.setBackgroundResource(R.drawable.rectangleyellow)
+        action2.setOnClickListener {
             playOffline(false)
             dialogTwoBtn.dismiss()
         }
@@ -6076,22 +5858,31 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         GlobalScope.launch(Dispatchers.Main) {
 
+            val logOutBtn = dialogPlayOnline.findViewById<TextView>(R.id.logOutBtn)
+            val logInName = dialogPlayOnline.findViewById<TextView>(R.id.logInName)
+            val escaleroPoints = dialogPlayOnline.findViewById<TextView>(R.id.escaleroPoints)
+            val rbSingle = dialogPlayOnline.findViewById<RadioButton>(R.id.rb_single)
+            val rbDouble = dialogPlayOnline.findViewById<RadioButton>(R.id.rb_double)
+            val playerSearch = dialogPlayOnline.findViewById<TextView>(R.id.playerSearch)
+            val quickMatch = dialogPlayOnline.findViewById<TextView>(R.id.quickMatch)
+            val checkMatches = dialogPlayOnline.findViewById<TextView>(R.id.checkMatches)
+
             if (mIsSignIn) {
-                dialogPlayOnline.logOutBtn.visibility = TextView.VISIBLE
-                dialogPlayOnline.logInName.text = mPlayerName
+                logOutBtn.visibility = TextView.VISIBLE
+                logInName.text = mPlayerName
             }
             else {
-                dialogPlayOnline.logOutBtn.visibility = TextView.INVISIBLE
-                dialogPlayOnline.logInName.text = getString(R.string.logIn)
+                logOutBtn.visibility = TextView.INVISIBLE
+                logInName.text = getString(R.string.logIn)
                 val epPlayer = "$mPlayerEp EP"
                 val epPrefs = "(? EP)"
                 if (mIsSignIn && mPlayerEp >= 0)
-                    dialogPlayOnline.escaleroPoints.text = epPlayer
+                    escaleroPoints.text = epPlayer
                 else
-                    dialogPlayOnline.escaleroPoints.text = epPrefs
+                    escaleroPoints.text = epPrefs
             }
 
-            dialogPlayOnline.logInName.setOnClickListener {
+            logInName.setOnClickListener {
 
                 if (checkConnectivity(false)) {
                     if (mIsSignIn) {
@@ -6106,7 +5897,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             }
 
-            dialogPlayOnline.logOutBtn.setOnClickListener {
+            logOutBtn.setOnClickListener {
                 signOut()
                 mIsSignIn = false
                 if (checkConnectivity(true))
@@ -6114,14 +5905,14 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
 
             if (ed.isSingleGame) {
-                dialogPlayOnline.rb_single.isChecked = true
-                dialogPlayOnline.rb_double.isChecked = false
+                rbSingle.isChecked = true
+                rbDouble.isChecked = false
             }
             else {
-                dialogPlayOnline.rb_double.isChecked = true
-                dialogPlayOnline.rb_single.isChecked = false
+                rbDouble.isChecked = true
+                rbSingle.isChecked = false
             }
-            dialogPlayOnline.rb_single.setOnClickListener {
+            rbSingle.setOnClickListener {
                 if (isOnlineActive) {
                     showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
                     dialogPlayOnline.dismiss()
@@ -6132,8 +5923,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                         val edi = prefs.edit()
                         edi.putBoolean("isSingleGame", ed.isSingleGame)
                         edi.apply()
-                        dialogPlayOnline.rb_single.isChecked = true
-                        dialogPlayOnline.rb_double.isChecked = false
+                        rbSingle.isChecked = true
+                        rbDouble.isChecked = false
                         updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
                         isInitBoard = true
                         handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
@@ -6144,7 +5935,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                     }
                 }
             }
-            dialogPlayOnline.rb_double.setOnClickListener {
+            rbDouble.setOnClickListener {
                 if (isOnlineActive) {
                     showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
                     dialogPlayOnline.dismiss()
@@ -6155,8 +5946,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                         val edi = prefs.edit()
                         edi.putBoolean("isSingleGame", ed.isSingleGame)
                         edi.apply()
-                        dialogPlayOnline.rb_double.isChecked = true
-                        dialogPlayOnline.rb_single.isChecked = false
+                        rbDouble.isChecked = true
+                        rbSingle.isChecked = false
                         updateUserStatus(playerId = mPlayerId, singleGame = ed.isSingleGame)
                         isInitBoard = true
                         handlerAnimationDices.removeCallbacks(mUpdateAnimationDices)
@@ -6171,7 +5962,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             }
 
-            dialogPlayOnline.playerSearch.setOnClickListener {
+            playerSearch.setOnClickListener {
                 if (!mIsSignIn) {
                     showErrorMessage(R.string.notLoggedIn)
                 } else {
@@ -6179,7 +5970,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
             }
 
-            dialogPlayOnline.quickMatch.setOnClickListener {
+            quickMatch.setOnClickListener {
                 if (!mIsSignIn) {
                     showErrorMessage(R.string.notLoggedIn)
                 } else {
@@ -6192,7 +5983,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
             }
 
-            dialogPlayOnline.checkMatches.setOnClickListener {
+            checkMatches.setOnClickListener {
                 if (!mIsSignIn) {
                     showErrorMessage(R.string.notLoggedIn)
                 } else {
@@ -6207,12 +5998,12 @@ class MainActivity : Activity(), View.OnTouchListener {
     //        Log.d(TAG, "B showPlayOnlineDialog(), dialogPlayOnline.isShowing: ${dialogPlayOnline.isShowing}, isFinishing: $isFinishing")
 
             if (mIsSignIn && mPlayerEp >= 0)
-                dialogPlayOnline.escaleroPoints.text = epPlayer
+                escaleroPoints.text = epPlayer
 
             if (!mPlayerId.isNullOrBlank()) {
-                val defferedLeaderboardScore = async { getLeaderboardScore(mPlayerId!!) }
-                mPlayerEp = defferedLeaderboardScore.await()
-                defferedLeaderboardScore.cancel()
+                val deferredLeaderboardScore = async { getLeaderboardScore(mPlayerId!!) }
+                mPlayerEp = deferredLeaderboardScore.await()
+                deferredLeaderboardScore.cancel()
 
 //                Log.d(TAG, "showPlayOnlineDialog(), leaderboardScore: $mPlayerEp")
 
@@ -6223,12 +6014,10 @@ class MainActivity : Activity(), View.OnTouchListener {
 //                Log.d(TAG, "Z2 showPlayOnlineDialog(), prefs, leaderboardTimestamp: ${runPrefs.getLong("leaderboardTimestamp", 1L)}")
 
             if (mIsSignIn && mPlayerEp >= 0)
-                dialogPlayOnline.escaleroPoints.text = epPlayer
+                escaleroPoints.text = epPlayer
             else
-                dialogPlayOnline.escaleroPoints.text = epPrefs
+                escaleroPoints.text = epPrefs
 
-            //android.view.WindowManager$BadTokenException
-//            if (!dialogPlayOnline.isShowing)
             if (!dialogPlayOnline.isShowing && !isFinishing)
                 dialogPlayOnline.show()
 
@@ -6240,45 +6029,51 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         dialogPlayOnline.dismiss()
 
+        val playerName = dialogPlayerName.findViewById<TextView>(R.id.playerName)
+        val playerNameAction = dialogPlayerName.findViewById<TextView>(R.id.playerNameAction)
+        val playerNameInfo = dialogPlayerName.findViewById<TextView>(R.id.playerNameInfo)
+        val btnAction = dialogPlayerName.findViewById<TextView>(R.id.btnAction)
+        val btnCancel = dialogPlayerName.findViewById<TextView>(R.id.btnCancel)
+
         if (isNewPlayer) {
             dialogPlayerName.setCancelable(false)
-            dialogPlayerName.playerNameAction.text = getString(R.string.playerNew)
-            dialogPlayerName.playerNameInfo.text = getString(R.string.infoPlayerNew)
-            dialogPlayerName.btnAction.text = getString(R.string.googleSignIn)
+            playerNameAction.text = getString(R.string.playerNew)
+            playerNameInfo.text = getString(R.string.infoPlayerNew)
+            btnAction.text = getString(R.string.googleSignIn)
         }
         else {
             dialogPlayerName.setCancelable(true)
-            dialogPlayerName.playerNameAction.text = getString(R.string.playerUpdate, mPlayerName)
-            dialogPlayerName.playerNameInfo.text = getString(R.string.infoPlayerUpdate)
-            dialogPlayerName.btnAction.text = getString(R.string.matchUpdate)
+            playerNameAction.text = getString(R.string.playerUpdate, mPlayerName)
+            playerNameInfo.text = getString(R.string.infoPlayerUpdate)
+            btnAction.text = getString(R.string.matchUpdate)
         }
 
-        dialogPlayerName.btnCancel.setOnClickListener {
+        btnCancel.setOnClickListener {
             if (!isNewPlayer)
                 dialogPlayerName.dismiss()
         }
 
-        dialogPlayerName.btnAction.setOnClickListener {
+        btnAction.setOnClickListener {
 
 //            Log.d(TAG, "1 showUpdatePlayerNameDialog(), isNewPlayer: $isNewPlayer, mPlayerName: $mPlayerName")
 //            Log.d(TAG, "2 showUpdatePlayerNameDialog(), isNewPlayer: $isNewPlayer, dialogPlayerName: ${dialogPlayerName.playerName.text}")
 //            Log.d(TAG, "3 showUpdatePlayerNameDialog(), isNewPlayer: $isNewPlayer, text.length: ${dialogPlayerName.playerName.text.length}")
 
-            if (dialogPlayerName.playerName.text.length >= 4 && mPlayerId != null) {
+            if (playerName.text.length >= 4 && mPlayerId != null) {
 
 //                Log.d(TAG, "6 showUpdatePlayerNameDialog(), isNewPlayer: $isNewPlayer, mPlayerId: $mPlayerId")
 
                 GlobalScope.launch(Dispatchers.Main) {
 
-                    val defferedUserIdFromName = async { getUserIdFromName(dialogPlayerName.playerName.text.toString()) }
-                    val fbUserId = defferedUserIdFromName.await()
-                    defferedUserIdFromName.cancel()
+                    val deferredUserIdFromName = async { getUserIdFromName(playerName.text.toString()) }
+                    val fbUserId = deferredUserIdFromName.await()
+                    deferredUserIdFromName.cancel()
 
                     if (fbUserId == "")
-                        mPlayerName = dialogPlayerName.playerName.text.toString()
+                        mPlayerName = playerName.text.toString()
                     else {
-                        showInfoDialog(getString(R.string.info), getString(R.string.playerNameExists, dialogPlayerName.playerName.text.toString()), getString(R.string.ok))
-                        dialogPlayerName.playerName.setText("")
+                        showInfoDialog(getString(R.string.info), getString(R.string.playerNameExists, playerName.text.toString()), getString(R.string.ok))
+                        playerName.text = ""
                         return@launch
                     }
 
@@ -6303,9 +6098,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                     userData.token = ""
                     userData.uid = mPlayerId
 
-                    val defferedUpdateUserData = async { updateUserData(mPlayerId!!, userData) }
-                    defferedUpdateUserData.await()
-                    defferedUpdateUserData.cancel()
+                    val deferredUpdateUserData = async { updateUserData(mPlayerId!!, userData) }
+                    deferredUpdateUserData.await()
+                    deferredUpdateUserData.cancel()
 
                     mPlayerEp = if (isNewPlayer)
                         ONLINE_LEADERBORD_BONUS_1
@@ -6316,9 +6111,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                     ld.score = mPlayerEp
                     ld.uid = mPlayerId
 
-                    val defferedUpdateLeaderboardData = async { updateLeaderboardData(mPlayerId!!, ld) }
-                    defferedUpdateLeaderboardData.await()
-                    defferedUpdateLeaderboardData.cancel()
+                    val deferredUpdateLeaderboardData = async { updateLeaderboardData(mPlayerId!!, ld) }
+                    deferredUpdateLeaderboardData.await()
+                    deferredUpdateLeaderboardData.cancel()
 
                     val ref = FirebaseDatabase.getInstance().getReference("userMatches/${mPlayerId!!}")
                     ref.addListenerForSingleValueEvent(object : ValueEventListener {
@@ -6331,9 +6126,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                                         val matchId = um.matchId ?: ""
                                         if (matchId.isNotEmpty()) {
                                             GlobalScope.launch(Dispatchers.Main) {
-                                                val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                                                val baseData = defferedGetMatchBaseData.await()
-                                                defferedGetMatchBaseData.cancel()
+                                                val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+                                                val baseData = deferredGetMatchBaseData.await()
+                                                deferredGetMatchBaseData.cancel()
                                                 if (baseData != null) {
 
 //                                                Log.d(TAG, "B showUpdatePlayerNameDialog(), baseData.playerIdA: ${baseData.playerIdA}, baseData.playerIdB: ${baseData.playerIdB}")
@@ -6379,9 +6174,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         if (mPlayerId != null) {
             GlobalScope.launch(Dispatchers.Main) {
-                val defferedGetUserMatches = async { getUserMatches(mPlayerId!!) }
-                val matchList = defferedGetUserMatches.await()
-                defferedGetUserMatches.cancel()
+                val deferredGetUserMatches = async { getUserMatches(mPlayerId!!) }
+                val matchList = deferredGetUserMatches.await()
+                deferredGetUserMatches.cancel()
                 showMatchDialog(matchList, false)
             }
         }
@@ -6394,44 +6189,51 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //        Log.i(TAG, "showPlayerQuery(), start")
 
-        dialogPlayerQuery = Dialog(this, android.R.style.Theme_Light)
-        dialogPlayerQuery.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialogPlayerQuery.setContentView(R.layout.dialogplayerquery)
+
+        val playerOnline = dialogPlayerQuery.findViewById<TextView>(R.id.playerOnline)
+        val playerOftenActive = dialogPlayerQuery.findViewById<TextView>(R.id.playerOftenActive)
+        val playerLeaderboard = dialogPlayerQuery.findViewById<TextView>(R.id.playerLeaderboard)
+        val leaderboardListView = dialogPlayerQuery.findViewById<ListView>(R.id.leaderboardListView)
+        val leaderboardEmpty = dialogPlayerQuery.findViewById<TextView>(R.id.leaderboardEmpty)
+        val lbMes = dialogPlayerQuery.findViewById<TextView>(R.id.lbMes)
+        val btnQuickMatch = dialogPlayerQuery.findViewById<TextView>(R.id.btnQuickMatch)
+        val btnOk = dialogPlayerQuery.findViewById<TextView>(R.id.btnOk)
 
         dialogPlayOnline.dismiss()
 
         when (prefs.getInt("playerQueryId", 2)) {
             1 -> {
-                dialogPlayerQuery.playerOnline.setBackgroundColor(ContextCompat.getColor(this, R.color.colorDiceB))
-                dialogPlayerQuery.playerOftenActive.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
-                dialogPlayerQuery.playerLeaderboard.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
+                playerOnline.setBackgroundColor(ContextCompat.getColor(this, R.color.colorDiceB))
+                playerOftenActive.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
+                playerLeaderboard.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
             }
             2 -> {
-                dialogPlayerQuery.playerOnline.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
-                dialogPlayerQuery.playerOftenActive.setBackgroundColor(ContextCompat.getColor(this, R.color.colorDiceB))
-                dialogPlayerQuery.playerLeaderboard.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
+                playerOnline.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
+                playerOftenActive.setBackgroundColor(ContextCompat.getColor(this, R.color.colorDiceB))
+                playerLeaderboard.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
             }
             3 -> {
-                dialogPlayerQuery.playerOnline.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
-                dialogPlayerQuery.playerOftenActive.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
-                dialogPlayerQuery.playerLeaderboard.setBackgroundColor(ContextCompat.getColor(this, R.color.colorDiceB))
+                playerOnline.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
+                playerOftenActive.setBackgroundColor(ContextCompat.getColor(this, R.color.text_yellow))
+                playerLeaderboard.setBackgroundColor(ContextCompat.getColor(this, R.color.colorDiceB))
             }
         }
-        dialogPlayerQuery.playerOnline.setOnClickListener {
+        playerOnline.setOnClickListener {
             val edi = prefs.edit()
             edi.putInt("playerQueryId", 1)
             edi.apply()
             dialogPlayerQuery.dismiss()
             showPlayerQuery()
         }
-        dialogPlayerQuery.playerOftenActive.setOnClickListener {
+        playerOftenActive.setOnClickListener {
             val edi = prefs.edit()
             edi.putInt("playerQueryId", 2)
             edi.apply()
             dialogPlayerQuery.dismiss()
             showPlayerQuery()
         }
-        dialogPlayerQuery.playerLeaderboard.setOnClickListener {
+        playerLeaderboard.setOnClickListener {
             val edi = prefs.edit()
             edi.putInt("playerQueryId", 3)
             edi.apply()
@@ -6439,20 +6241,20 @@ class MainActivity : Activity(), View.OnTouchListener {
             showPlayerQuery()
         }
 
-        dialogPlayerQuery.leaderboardListView.visibility = ListView.INVISIBLE
-        dialogPlayerQuery.leaderboardEmpty.visibility = ListView.VISIBLE
+        leaderboardListView.visibility = ListView.INVISIBLE
+        leaderboardEmpty.visibility = ListView.VISIBLE
         dialogPlayerQuery.setCancelable(true)
         if (!isOnlineActive)
-            dialogPlayerQuery.lbMes.text = getString(R.string.invitationSelectPlayer)
+            lbMes.text = getString(R.string.invitationSelectPlayer)
         else
-            dialogPlayerQuery.lbMes.text = ""
-        dialogPlayerQuery.btnQuickMatch.setOnClickListener {
+            lbMes.text = ""
+        btnQuickMatch.setOnClickListener {
             if (isOnlineActive)
                 showInfoDialog(getString(R.string.info), getString(R.string.firstFinishActiveMatch), getString(R.string.ok))
             else
                 startQuickMatch()
         }
-        dialogPlayerQuery.btnOk.setOnClickListener {
+        btnOk.setOnClickListener {
             dialogPlayerQuery.dismiss()
         }
         dialogPlayerQuery.setOnCancelListener {
@@ -6466,43 +6268,43 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //            Log.i(TAG, "showPlayerQuery(), bestScores, worstScores")
 
-            val defferedLeaderboardCount = async { getLeaderboardCount() }
-            val lbCount = defferedLeaderboardCount.await()
-            defferedLeaderboardCount.cancel()
+            val deferredLeaderboardCount = async { getLeaderboardCount() }
+            val lbCount = deferredLeaderboardCount.await()
+            deferredLeaderboardCount.cancel()
             var lbView = lbCount
             if (lbCount > ONLINE_LEADERBORD_MAX_PLAYERS)
                 lbView = ONLINE_LEADERBORD_MAX_PLAYERS
             val lbText = getString(R.string.leaderboard)
             val lbInfo = "$lbText $lbView($lbCount)"
-            dialogPlayerQuery.playerLeaderboard.text = lbInfo
+            playerLeaderboard.text = lbInfo
 
             val lbList: ArrayList<UserList>
             when (prefs.getInt("playerQueryId", 2)) {
                 1 -> {
-                    val defferedOnline = async { getPlayerQueryArray(true) }
-                    lbList = defferedOnline.await()
-                    defferedOnline.cancel()
+                    val deferredOnline = async { getPlayerQueryArray(true) }
+                    lbList = deferredOnline.await()
+                    deferredOnline.cancel()
                 }
                 2 -> {
-                    val defferedOftenActive = async { getPlayerQueryArray(false) }
-                    lbList = defferedOftenActive.await()
-                    defferedOftenActive.cancel()
+                    val deferredOftenActive = async { getPlayerQueryArray(false) }
+                    lbList = deferredOftenActive.await()
+                    deferredOftenActive.cancel()
                 }
                 else -> {
-                    val defferedGetLeaderboardScores = async { getLeaderboardScores() }
-                    lbList = defferedGetLeaderboardScores.await()
-                    defferedGetLeaderboardScores.cancel()
+                    val deferredGetLeaderboardScores = async { getLeaderboardScores() }
+                    lbList = deferredGetLeaderboardScores.await()
+                    deferredGetLeaderboardScores.cancel()
                 }
             }
 
-            dialogPlayerQuery.leaderboardListView.visibility = ListView.VISIBLE
-            dialogPlayerQuery.leaderboardEmpty.visibility = ListView.INVISIBLE
+            leaderboardListView.visibility = ListView.VISIBLE
+            leaderboardEmpty.visibility = ListView.INVISIBLE
 
 //            Log.i(TAG, "showPlayerQuery(), lbList.size: ${lbList.size}")
 
             val adapter = UserListAdapter(applicationContext, lbList)
-            dialogPlayerQuery.leaderboardListView.adapter = adapter
-            dialogPlayerQuery.leaderboardListView.onItemClickListener = AdapterView.OnItemClickListener { _, _, x, _ ->
+            leaderboardListView.adapter = adapter
+            leaderboardListView.onItemClickListener = AdapterView.OnItemClickListener { _, _, x, _ ->
 
 //                Log.i(TAG, "showPlayerQuery(), playerName: ${userListArray[x].playerName}, id: ${userListArray[x].playerId}")
 //                Log.i(TAG, "showPlayerQuery(), mPlayerId: $mPlayerId")
@@ -6522,21 +6324,21 @@ class MainActivity : Activity(), View.OnTouchListener {
                             playerIdList.addAll(listOf(lbList[x].playerId))
 
                             GlobalScope.launch(Dispatchers.Main) {
-                                val defferedUserIdFromName = async { getUserIdFromName(lbList[x].playerName) }
-                                val fbUserId = defferedUserIdFromName.await()
-                                defferedUserIdFromName.cancel()
+                                val deferredUserIdFromName = async { getUserIdFromName(lbList[x].playerName) }
+                                val fbUserId = deferredUserIdFromName.await()
+                                deferredUserIdFromName.cancel()
 
-                                val defferedGetUserData = async { getUserData(fbUserId) }
-                                val user = defferedGetUserData.await()
-                                defferedGetUserData.cancel()
+                                val deferredGetUserData = async { getUserData(fbUserId) }
+                                val user = deferredGetUserData.await()
+                                deferredGetUserData.cancel()
 
                                 if (user != null) {
 
-//                                    Log.i(TAG, "showPlayerQuery(), queryUserId: ${user.uid!!}, queryUserame: ${user.name!!}")
+//                                    Log.i(TAG, "showPlayerQuery(), queryUserId: ${user.uid!!}, queryUsername: ${user.name!!}")
 
-                                    val defferedLeaderboardScore = async { getLeaderboardScore(fbUserId) }
-                                    val leaderboardScore = defferedLeaderboardScore.await()
-                                    defferedLeaderboardScore.cancel()
+                                    val deferredLeaderboardScore = async { getLeaderboardScore(fbUserId) }
+                                    val leaderboardScore = deferredLeaderboardScore.await()
+                                    deferredLeaderboardScore.cancel()
                                     var gameType = ""
                                     var isInvitation = true
                                     if (!ed.isSingleGame) {
@@ -6545,7 +6347,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                                             showInfoDialog(getString(R.string.info), info, getString(R.string.ok))
                                             isInvitation = false
                                         }
-                                        gameType = getString(R.string.typeDouble).toUpperCase((Locale.ROOT))
+                                        gameType = getString(R.string.typeDouble).uppercase((Locale.ROOT))
                                     }
                                     if (isInvitation) {
                                         val mes = "${user.name}, $leaderboardScore EP"
@@ -6564,7 +6366,8 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             }
 
-            dialogPlayerQuery.show()
+            try { dialogPlayerQuery.show() }
+            catch (ignored: WindowManager.BadTokenException) { }
 
 //                Log.i(TAG, "showPlayerQuery(), dialogPlayerQuery.show()")
 
@@ -6577,16 +6380,16 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun startQuickMatch() {
         if (!mPlayerId.isNullOrBlank()) {
             GlobalScope.launch(Dispatchers.Main) {
-                val defferedGetQuickMatchUserId = async { getQuickMatchUserId() }
-                val userId = defferedGetQuickMatchUserId.await()
-                defferedGetQuickMatchUserId.cancel()
+                val deferredGetQuickMatchUserId = async { getQuickMatchUserId() }
+                val userId = deferredGetQuickMatchUserId.await()
+                deferredGetQuickMatchUserId.cancel()
                 if (userId == "0") {
 
 //                    Log.i(TAG, "startQuickMatch(), userId: $userId")
 
-                    val defferedSetQuickMatchUserId = async { setQuickMatchUserId(mPlayerId!!) }
-                    defferedSetQuickMatchUserId.await()
-                    defferedSetQuickMatchUserId.cancel()
+                    val deferredSetQuickMatchUserId = async { setQuickMatchUserId(mPlayerId!!) }
+                    deferredSetQuickMatchUserId.await()
+                    deferredSetQuickMatchUserId.cancel()
                     Toast.makeText(applicationContext, getString(R.string.activatedQuickMatch), Toast.LENGTH_LONG).show()
 
                     mTimerQuickMatch.schedule(QUICK_MATCH_DELAY) {
@@ -6594,9 +6397,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 //                        Log.i(TAG, "startQuickMatch(), mTimerQuickMatch.schedule")
 
                         GlobalScope.launch(Dispatchers.Main) {
-                            val defferedGetQuickMatchTimerUserId = async { getQuickMatchUserId() }
-                            val userIdTimer = defferedGetQuickMatchTimerUserId.await()
-                            defferedGetQuickMatchTimerUserId.cancel()
+                            val deferredGetQuickMatchTimerUserId = async { getQuickMatchUserId() }
+                            val userIdTimer = deferredGetQuickMatchTimerUserId.await()
+                            deferredGetQuickMatchTimerUserId.cancel()
                             if (userIdTimer == mPlayerId!!) {
                                 setQuickMatchUserId("0")
                                 if (appInForeground(applicationContext))
@@ -6615,12 +6418,12 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                        Log.i(TAG, "startQuickMatch(), userId: $userId, mPlayerId: ${mPlayerId!!}")
 
-                        val defferedSetQuickMatchUserId = async { setQuickMatchUserId("0") }
-                        defferedSetQuickMatchUserId.await()
-                        defferedSetQuickMatchUserId.cancel()
-                        val defferedGetUserData = async { getUserData(userId) }
-                        val user = defferedGetUserData.await()
-                        defferedGetUserData.cancel()
+                        val deferredSetQuickMatchUserId = async { setQuickMatchUserId("0") }
+                        deferredSetQuickMatchUserId.await()
+                        deferredSetQuickMatchUserId.cancel()
+                        val deferredGetUserData = async { getUserData(userId) }
+                        val user = deferredGetUserData.await()
+                        deferredGetUserData.cancel()
                         if (user != null) {
                             btnPlayerResult.text = resources.getString(R.string.waitingForPlayer, user.name)
                             if (user.uid != null)
@@ -6686,19 +6489,21 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         GlobalScope.launch(Dispatchers.Main) {
 
+//            Log.d(TAG, "startOnlineMatch(), matchId: $matchId")
+
             mMatchId = matchId
-            val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-            mMatchBaseData = defferedGetMatchBaseData.await()
-            defferedGetMatchBaseData.cancel()
-            val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-            mMatchUpdateData = defferedGetMatchUpdateData.await()
-            defferedGetMatchUpdateData.cancel()
+            val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+            mMatchBaseData = deferredGetMatchBaseData.await()
+            deferredGetMatchBaseData.cancel()
+            val deferredGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+            mMatchUpdateData = deferredGetMatchUpdateData.await()
+            deferredGetMatchUpdateData.cancel()
 
             if (mMatchId != null && mMatchBaseData != null && mMatchUpdateData != null) {
                 dismissAllDialogs()
 
 //                Log.d(TAG, "startOnlineMatch(), startMatchUpdateListener(), mMatchId: $mMatchId")
-//                Log.d(TAG, "startOnlineMatch(), startMatchUpdateListener(), mOponentId: $mOponentId")
+//                Log.d(TAG, "startOnlineMatch(), startMatchUpdateListener(), mOpponentId: $mOpponentId")
 //                Log.d(TAG, "startOnlineMatch(), startMatchUpdateListener(), playerIdB: ${mMatchBaseData!!.playerIdB}, nameB: ${mMatchBaseData!!.nameB}")
 
                 startMatchUpdateListener(mMatchId!!)
@@ -6707,8 +6512,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                     playSound(4, 0)
                     isOnlineActive = true
                     isDoingTurn = true
-                    mOponentId = mMatchBaseData!!.playerIdB!!
-                    setOponentData(mMatchBaseData!!.playerIdB!!, "B")
+                    mOpponentId = mMatchBaseData!!.playerIdB!!
+                    setOpponentData(mMatchBaseData!!.playerIdB!!, "B")
                     setPrefs(mMatchUpdateData!!)
                     setDataUpdate()
                     initRunPrefs()
@@ -6734,17 +6539,17 @@ class MainActivity : Activity(), View.OnTouchListener {
             dismissAllDialogs()
 
             if (mPlayerId == mMatchBaseData!!.playerIdA!!) {
-                setOponentData(mMatchBaseData!!.playerIdB!!, "B")
-                mOponentId = mMatchBaseData!!.playerIdB!!
-                mOponentName = mMatchBaseData!!.nameB
-                mOponentABC = "B"
+                setOpponentData(mMatchBaseData!!.playerIdB!!, "B")
+                mOpponentId = mMatchBaseData!!.playerIdB!!
+                mOpponentName = mMatchBaseData!!.nameB
+                mOpponentABC = "B"
                 mPlayerABC = "A"
             }
             else {
-                setOponentData(mMatchBaseData!!.playerIdA!!, "A")
-                mOponentId = mMatchBaseData!!.playerIdA!!
-                mOponentName = mMatchBaseData!!.nameA
-                mOponentABC = "A"
+                setOpponentData(mMatchBaseData!!.playerIdA!!, "A")
+                mOpponentId = mMatchBaseData!!.playerIdA!!
+                mOpponentName = mMatchBaseData!!.nameA
+                mOpponentABC = "A"
                 mPlayerABC = "B"
             }
 
@@ -6796,7 +6601,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     //ONLINE - methods, signing
     private fun checkConnectivity(isSignOut: Boolean): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val isConnected: Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val nw      = connectivityManager.activeNetwork ?: return false
             val actNw = connectivityManager.getNetworkCapabilities(nw) ?: return false
@@ -6827,9 +6632,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 //        Log.d(TAG, "signInSilently(), mPlayerId: $mPlayerId")
 
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedGoogleSignInAccount = async { signIn() }
-            val googleSignInAccount = defferedGoogleSignInAccount.await()
-            defferedGoogleSignInAccount.cancel()
+            val deferredGoogleSignInAccount = async { signIn() }
+            val googleSignInAccount = deferredGoogleSignInAccount.await()
+            deferredGoogleSignInAccount.cancel()
 
 //            Log.d(TAG, "signInSilently(), googleSignInAccount: $googleSignInAccount")
 
@@ -6844,30 +6649,34 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     }
 
-    private fun onConnected(googleSignInAccount: GoogleSignInAccount?, showOnlinDialog: Boolean) {
+    private fun onConnected(googleSignInAccount: GoogleSignInAccount?, showOnlineDialog: Boolean) {
 
-//        Log.i(TAG, "onConnected(), showOnlinDialog: $showOnlinDialog")
+//        Log.i(TAG, "onConnected(), showOnlineDialog: $showOnlineDialog")
 
         if (!checkConnectivity(false))
             return
 
 //        Log.i(TAG, "2 onConnected(), checkConnectivity")
 
+        //karl!?
+        if (mIsSignIn && !mPlayerId.isNullOrBlank())
+            return
+
         mIsSignIn = false
 
         GlobalScope.launch(Dispatchers.Main) {
 
-            val defferedFirebaseAuthWithGoogleAccount = async { firebaseAuthWithGoogleAccount(googleSignInAccount) }
-            mIsSignIn = defferedFirebaseAuthWithGoogleAccount.await()
-            defferedFirebaseAuthWithGoogleAccount.cancel()
+            val deferredFirebaseAuthWithGoogleAccount = async { firebaseAuthWithGoogleAccount(googleSignInAccount) }
+            mIsSignIn = deferredFirebaseAuthWithGoogleAccount.await()
+            deferredFirebaseAuthWithGoogleAccount.cancel()
 
 //            Log.d(TAG, "onConnected(), isFirebaseAuthOk: $mIsSignIn, mPlayerId: $mPlayerId")
 
             if (mIsSignIn && !mPlayerId.isNullOrBlank()) {
 
-                val defferedGetUserData = async { getUserData(mPlayerId!!) }
-                val user = defferedGetUserData.await()
-                defferedGetUserData.cancel()
+                val deferredGetUserData = async { getUserData(mPlayerId!!) }
+                val user = deferredGetUserData.await()
+                deferredGetUserData.cancel()
                 if (user != null) {
                     mPlayerName = user.name ?: ""
 
@@ -6885,36 +6694,36 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                        Log.d(TAG, "onConnected(), mMatchId: $mMatchId, user.matchId: ${user.currentMatchId}, user.online: ${user.online}, user.playing: ${user.playing}")
 
-                        val defferedGetMatchBaseData = async { getMatchBaseData(user.currentMatchId!!) }
-                        mMatchBaseData = defferedGetMatchBaseData.await()
-                        defferedGetMatchBaseData.cancel()
-                        val defferedGetMatchUpdateData = async { getMatchUpdateData(user.currentMatchId!!) }
-                        mMatchUpdateData = defferedGetMatchUpdateData.await()
-                        defferedGetMatchUpdateData.cancel()
+                        val deferredGetMatchBaseData = async { getMatchBaseData(user.currentMatchId!!) }
+                        mMatchBaseData = deferredGetMatchBaseData.await()
+                        deferredGetMatchBaseData.cancel()
+                        val deferredGetMatchUpdateData = async { getMatchUpdateData(user.currentMatchId!!) }
+                        mMatchUpdateData = deferredGetMatchUpdateData.await()
+                        deferredGetMatchUpdateData.cancel()
                         if (mMatchBaseData != null && mMatchUpdateData != null) {
                             mMatchId = user.currentMatchId!!
 
-                            val defferedGetMatchTimestamp = async { getMatchTimestamp(user.currentMatchId!!) }
-                            val timestamp = defferedGetMatchTimestamp.await().toLong()
-                            defferedGetMatchTimestamp.cancel()
-                            val defferedTimestamp = async { getTimestampFromServer() }
-                            val serverTimestamp = defferedTimestamp.await().toLong()
-                            defferedTimestamp.cancel()
+                            val deferredGetMatchTimestamp = async { getMatchTimestamp(user.currentMatchId!!) }
+                            val timestamp = deferredGetMatchTimestamp.await().toLong()
+                            deferredGetMatchTimestamp.cancel()
+                            val deferredTimestamp = async { getTimestampFromServer() }
+                            val serverTimestamp = deferredTimestamp.await().toLong()
+                            deferredTimestamp.cancel()
 
                             if (serverTimestamp - timestamp <= RECONNECT_TIME) {
                                 mTimestampPre = timestamp
                                 if (mPlayerId == mMatchBaseData!!.playerIdA!!) {
-                                    mOponentId = mMatchBaseData!!.playerIdB!!
-                                    mOponentName = mMatchBaseData!!.nameB
-                                    mOponentABC = "B"
+                                    mOpponentId = mMatchBaseData!!.playerIdB!!
+                                    mOpponentName = mMatchBaseData!!.nameB
+                                    mOpponentABC = "B"
                                     mPlayerABC = "A"
-                                    setOponentData(mMatchBaseData!!.playerIdB!!, "B")
+                                    setOpponentData(mMatchBaseData!!.playerIdB!!, "B")
                                 } else {
-                                    mOponentId = mMatchBaseData!!.playerIdA!!
-                                    mOponentName = mMatchBaseData!!.nameA
-                                    mOponentABC = "A"
+                                    mOpponentId = mMatchBaseData!!.playerIdA!!
+                                    mOpponentName = mMatchBaseData!!.nameA
+                                    mOpponentABC = "A"
                                     mPlayerABC = "B"
-                                    setOponentData(mMatchBaseData!!.playerIdA!!, "A")
+                                    setOpponentData(mMatchBaseData!!.playerIdA!!, "A")
                                 }
 
                                 ed.isSingleGame = mMatchBaseData!!.singleGame ?: true
@@ -6924,9 +6733,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 //                            Log.d(TAG, "4 showMatchDialog(), actionId: $actionId")
 
-                                val defferedGetUserDataOpo = async { getUserData(mOponentId!!) }
-                                val userOpo = defferedGetUserDataOpo.await()
-                                defferedGetUserDataOpo.cancel()
+                                val deferredGetUserDataOpo = async { getUserData(mOpponentId!!) }
+                                val userOpo = deferredGetUserDataOpo.await()
+                                deferredGetUserDataOpo.cancel()
 
                                 if (userOpo != null) {
                                     dialogTwoBtn.dismiss()
@@ -6985,13 +6794,13 @@ class MainActivity : Activity(), View.OnTouchListener {
                     userData.token = ""
                     userData.uid = mPlayerId
 
-                    val defferedUpdateUserData = async { updateUserData(mPlayerId!!, userData) }
-                    defferedUpdateUserData.await()
-                    defferedUpdateUserData.cancel()
+                    val deferredUpdateUserData = async { updateUserData(mPlayerId!!, userData) }
+                    deferredUpdateUserData.await()
+                    deferredUpdateUserData.cancel()
 
-                    val defferedLeaderboardScore = async { getLeaderboardScore(mPlayerId!!) }
-                    mPlayerEp = defferedLeaderboardScore.await()
-                    defferedLeaderboardScore.cancel()
+                    val deferredLeaderboardScore = async { getLeaderboardScore(mPlayerId!!) }
+                    mPlayerEp = deferredLeaderboardScore.await()
+                    deferredLeaderboardScore.cancel()
 
                     if (mPlayerEp == -5L) {  // no data
                         val ld = Leaderboard()
@@ -7004,9 +6813,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                         ld.timestamp = 0L
                         ld.uid = mPlayerId
 
-                        val defferedUpdateLeaderboardData = async { updateLeaderboardData(mPlayerId!!, ld) }
-                        defferedUpdateLeaderboardData.await()
-                        defferedUpdateLeaderboardData.cancel()
+                        val deferredUpdateLeaderboardData = async { updateLeaderboardData(mPlayerId!!, ld) }
+                        deferredUpdateLeaderboardData.await()
+                        deferredUpdateLeaderboardData.cancel()
 
 //                        Log.d(TAG, "3 onConnected(), mPlayerName: $mPlayerName, mPlayerEp: $mPlayerEp")
 
@@ -7015,7 +6824,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                     isInitBoard = true
                     setEP()
 
-//                    Log.d(TAG, "4 onConnected(), notificationIntent: $notificationIntent, showOnlinDialog: $showOnlinDialog")
+//                    Log.d(TAG, "4 onConnected(), notificationIntent: $notificationIntent, showOnlineDialog: $showOnlineDialog")
 
                     if (notificationIntent != null) {
                         val actionId = notificationIntent!!.extras?.getString("actionId")?: ""
@@ -7035,9 +6844,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 //                            Log.i(TAG, "onConnected(), notificationIntent, !!! isOnlineActive !!!, actionId: $actionId, matchId: $matchId, fromUsername: $fromUsername")
 
                                 GlobalScope.launch(Dispatchers.Main) {
-                                    val defferedTimestamp = async { getTimestampFromServer() }
-                                    val tsServer = defferedTimestamp.await().toLong()
-                                    defferedTimestamp.cancel()
+                                    val deferredTimestamp = async { getTimestampFromServer() }
+                                    val tsServer = deferredTimestamp.await().toLong()
+                                    deferredTimestamp.cancel()
                                     when (actionId) {
                                         "7" -> {
                                             initOnline()
@@ -7060,12 +6869,12 @@ class MainActivity : Activity(), View.OnTouchListener {
                                     notificationNoDialog = false
                                     if (actionId == "3" || actionId == "4") {
                                         mMatchId = matchId
-                                        val defferedGetMatchBaseData = async { getMatchBaseData(matchId) }
-                                        mMatchBaseData = defferedGetMatchBaseData.await()
-                                        defferedGetMatchBaseData.cancel()
-                                        val defferedGetMatchUpdateData = async { getMatchUpdateData(matchId) }
-                                        mMatchUpdateData = defferedGetMatchUpdateData.await()
-                                        defferedGetMatchUpdateData.cancel()
+                                        val deferredGetMatchBaseData = async { getMatchBaseData(matchId) }
+                                        mMatchBaseData = deferredGetMatchBaseData.await()
+                                        deferredGetMatchBaseData.cancel()
+                                        val deferredGetMatchUpdateData = async { getMatchUpdateData(matchId) }
+                                        mMatchUpdateData = deferredGetMatchUpdateData.await()
+                                        deferredGetMatchUpdateData.cancel()
 
                                         continueOnlineMatch(actionId)
 
@@ -7077,7 +6886,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                                     when (actionId) {
                                         "", "1" -> {
                                             if (notificationIntent != null)
-                                                showInvitationFromNotificatioDialog(notificationIntent!!)
+                                                showInvitationFromNotificationDialog(notificationIntent!!)
                                         }
                                         "2" -> startOnlineMatch(matchId)
                                         "3", "4" -> showContinueMatchDialog(matchId, actionId)
@@ -7103,7 +6912,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                     }
                     else {
-                        if (showOnlinDialog && !dialogTwoBtn.isShowing)
+                        if (showOnlineDialog && !dialogTwoBtn.isShowing)
                             showPlayOnlineDialog()
                         if (!isOnlineActive)
                             quickMatchListener()
@@ -7134,9 +6943,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         mMatchId = null
 
         mPlayerABC = null
-        mOponentId = null
-        mOponentABC = null
-        mOponentName = null
+        mOpponentId = null
+        mOpponentABC = null
+        mOpponentName = null
         mTimestampPre = 0L
 
         updateTable(true)
@@ -7161,9 +6970,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         if (playerId != null) {
             GlobalScope.launch(Dispatchers.Main) {
-                val defferedGetUserData = async { getUserData(playerId) }
-                val user = defferedGetUserData.await()
-                defferedGetUserData.cancel()
+                val deferredGetUserData = async { getUserData(playerId) }
+                val user = deferredGetUserData.await()
+                deferredGetUserData.cancel()
                 if (user != null) {
                     user.ads = ads
                     user.chat = chat
@@ -7175,9 +6984,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                     user.online = online
                     user.playing = playing
                     user.singleGame = singleGame
-                    val defferedUpdateUserData = async { updateUserData(playerId, user) }
-                    defferedUpdateUserData.await()
-                    defferedUpdateUserData.cancel()
+                    val deferredUpdateUserData = async { updateUserData(playerId, user) }
+                    deferredUpdateUserData.await()
+                    deferredUpdateUserData.cancel()
                 }
             }
         }
@@ -7209,27 +7018,27 @@ class MainActivity : Activity(), View.OnTouchListener {
                 userData.token = ""
                 userData.uid = mPlayerId
 
-                val defferedUpdateUserData = async { updateUserData(mPlayerId!!, userData) }
-                defferedUpdateUserData.await()
-                defferedUpdateUserData.cancel()
+                val deferredUpdateUserData = async { updateUserData(mPlayerId!!, userData) }
+                deferredUpdateUserData.await()
+                deferredUpdateUserData.cancel()
 
-                val defferedGetQuickMatchUserId = async { getQuickMatchUserId() }
-                val userId = defferedGetQuickMatchUserId.await()
-                defferedGetQuickMatchUserId.cancel()
+                val deferredGetQuickMatchUserId = async { getQuickMatchUserId() }
+                val userId = deferredGetQuickMatchUserId.await()
+                deferredGetQuickMatchUserId.cancel()
                 if (userId == mPlayerId) {
-                    val defferedSetQuickMatchUserId = async { setQuickMatchUserId("0") }
-                    defferedSetQuickMatchUserId.await()
-                    defferedSetQuickMatchUserId.cancel()
+                    val deferredSetQuickMatchUserId = async { setQuickMatchUserId("0") }
+                    deferredSetQuickMatchUserId.await()
+                    deferredSetQuickMatchUserId.cancel()
                 }
 
                 if (mMatchId != null) {
-                    val defferedGetMatchUpdateData = async { getMatchUpdateData(mMatchId!!) }
-                    val checkUpdateData = defferedGetMatchUpdateData.await()
-                    defferedGetMatchUpdateData.cancel()
+                    val deferredGetMatchUpdateData = async { getMatchUpdateData(mMatchId!!) }
+                    val checkUpdateData = deferredGetMatchUpdateData.await()
+                    deferredGetMatchUpdateData.cancel()
 
-                    if (checkUpdateData != null && mOponentId != null) {
+                    if (checkUpdateData != null && mOpponentId != null) {
                         if (checkUpdateData.position == "") {
-                            startRemoveMatch(true, mMatchId!!, mPlayerId!!, mOponentId!!)
+                            startRemoveMatch(true, mMatchId!!, mPlayerId!!, mOpponentId!!)
                         }
                         else {
                             if (isDoingTurn)
@@ -7317,9 +7126,9 @@ class MainActivity : Activity(), View.OnTouchListener {
     //ONLINE - methods, match
     private fun matchDataToDb(isNextPlayer: Boolean, onlineAction: String) {
 
-//        Log.d(TAG, "matchDataToDb(), isNextPlayer: $isNextPlayer, onlineAction: $onlineAction, mOponentId: $mOponentId")
+//        Log.d(TAG, "matchDataToDb(), isNextPlayer: $isNextPlayer, onlineAction: $onlineAction, mOpponentId: $mOpponentId")
 
-        if (onlineAction != ONLINE_START && mOponentId.isNullOrEmpty()) {
+        if (onlineAction != ONLINE_START && mOpponentId.isNullOrEmpty()) {
             initOnline()
             setNoActiveMatch()
             showErrorMessage(R.string.matchPauseAndFinished)
@@ -7351,7 +7160,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                 }
                 ed.playerToMove = ed.nextPlayerToMove
                 updateTable(true)
-                diceModus = 1
+                diceMode = 1
             }
             ONLINE_GAME_OVER -> {
                 gameOver()
@@ -7363,14 +7172,14 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             isUpdating = true
 
-            val defferedTimestamp = async { getTimestampFromServer() }
-            val serverTimestamp = defferedTimestamp.await().toLong()
-            defferedTimestamp.cancel()
+            val deferredTimestamp = async { getTimestampFromServer() }
+            val serverTimestamp = deferredTimestamp.await().toLong()
+            deferredTimestamp.cancel()
 
             if (setMatchData(isNextPlayer, onlineAction)) {
-                val defferedUpdateDb = async { updateMatchData(mMatchId, mMatchBaseData, mMatchUpdateData, serverTimestamp) }
-                val isUpdated = defferedUpdateDb.await()
-                defferedUpdateDb.cancel()
+                val deferredUpdateDb = async { updateMatchData(mMatchId, mMatchBaseData, mMatchUpdateData, serverTimestamp) }
+                val isUpdated = deferredUpdateDb.await()
+                deferredUpdateDb.cancel()
 
 //            Log.d(TAG, "matchDataToDb(), isUpdated: $isUpdated")
 
@@ -7380,7 +7189,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                     if (onlineAction != ONLINE_ACTIVE_ENTRY)
                         isOnlineEntry = false
                     if (onlineAction == ONLINE_INIT && mMatchId != null) {
-                        invitationAccepted(mOponentId!!, mMatchId!!)
+                        invitationAccepted(mOpponentId!!, mMatchId!!)
                         startMatchUpdateListener(mMatchId!!)
                     } else
                         onUpdateMatch(onlineAction)
@@ -7427,12 +7236,12 @@ class MainActivity : Activity(), View.OnTouchListener {
 
         var isNext = isNextPlayer
 
-//        Log.d(TAG, "setMatchData(), isNextPlayer: $isNextPlayer, onlineAction: $onlineAction, mMatchId: $mMatchId, mOponentId: $mOponentId")
+//        Log.d(TAG, "setMatchData(), isNextPlayer: $isNextPlayer, onlineAction: $onlineAction, mMatchId: $mMatchId, mOpponentId: $mOpponentId")
 
         // --> mMatchBaseData (once only)
         if (mMatchId == null) {
             mMatchBaseData = MatchBaseData()
-            mMatchBaseData!!.appVersionCodeA = mOponentAppVersionCode
+            mMatchBaseData!!.appVersionCodeA = mOpponentAppVersionCode
             mMatchBaseData!!.appVersionCodeB = BuildConfig.VERSION_CODE.toLong()
             mMatchBaseData!!.bonusServed = ed.bonusServed.toLong()
             mMatchBaseData!!.bonusServedGrande = ed.bonusServedGrande.toLong()
@@ -7443,10 +7252,10 @@ class MainActivity : Activity(), View.OnTouchListener {
             val date = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(cDate)
             mMatchBaseData!!.date = date
             mMatchBaseData!!.diceState = diceState.toLong()
-            mMatchBaseData!!.nameA = mOponentName
+            mMatchBaseData!!.nameA = mOpponentName
             mMatchBaseData!!.nameB = mPlayerName
             mMatchBaseData!!.player = ed.playerNumber.toLong()               // player number
-            mMatchBaseData!!.playerIdA = mOponentId
+            mMatchBaseData!!.playerIdA = mOpponentId
             mMatchBaseData!!.playerIdB = mPlayerId
             mMatchBaseData!!.silent = false
 
@@ -7484,8 +7293,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 hold += diceHoldPrev[i]
         }
         mMatchUpdateData!!.diceHoldPrev = hold
-        mMatchUpdateData!!.diceModus = diceModus.toLong()
-        mMatchUpdateData!!.diceModusPrev = diceModusPrev.toLong()
+        mMatchUpdateData!!.diceModus = diceMode.toLong()
+        mMatchUpdateData!!.diceModusPrev = diceModePrev.toLong()
         roll = ""
         for (i in diceRoll.indices) {
             roll =
@@ -7534,7 +7343,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             val nPlayer = ed.getNextPlayerAB(ed.playerStart)
 
 //            Log.d(TAG, "setMatchData(), ed.playerStart: ${ed.playerStart}, nPlayer: $nPlayer, ed.playerToMove: ${ed.playerToMove}, isNext: $isNext")
-//            Log.d(TAG, "setMatchData(), onlineAction: $onlineAction, mMatchId: $mMatchId, mPlayerId: $mPlayerId, mOponentId: $mOponentId")
+//            Log.d(TAG, "setMatchData(), onlineAction: $onlineAction, mMatchId: $mMatchId, mPlayerId: $mPlayerId, mOpponentId: $mOpponentId")
 //            Log.d(TAG, "setMatchData(), onlineAction: $onlineAction, playerIdA: ${mMatchBaseData!!.playerIdA}, playerIdB: ${mMatchBaseData!!.playerIdB}")
 
             if (nPlayer != ed.playerToMove) {
@@ -7552,7 +7361,7 @@ class MainActivity : Activity(), View.OnTouchListener {
 
 
         if (isNext) {
-            mMatchUpdateData!!.turnPlayerId = mOponentId
+            mMatchUpdateData!!.turnPlayerId = mOpponentId
             isDoingTurn = false
         }
         else {
@@ -7613,7 +7422,7 @@ class MainActivity : Activity(), View.OnTouchListener {
                         if (mMatchBaseData!!.appVersionCodeA!! < MIN_VERSION_CODE || mMatchBaseData!!.appVersionCodeB!! < MIN_VERSION_CODE) {
                             val info = "${mMatchBaseData!!.nameA} - ${mMatchBaseData!!.nameB}\n\n${getString(R.string.differentAppVersions)}"
                             showInfoDialog(getString(R.string.info), info, getString(R.string.ok))
-                            matchCanceled(mOponentId!!, mMatchId!!, "9")
+                            matchCanceled(mOpponentId!!, mMatchId!!, "9")
                             startRemoveMatch(true, mMatchId!!, mMatchBaseData!!.playerIdA!!, mMatchBaseData!!.playerIdB!!)
                             return
                         }
@@ -7621,9 +7430,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                     GlobalScope.launch(Dispatchers.Main) {
                         if (playerIdA != null) {
-                            val defferedGetUserMatches = async { getUserMatches(playerIdA) }
-                            val matchListA = defferedGetUserMatches.await()
-                            defferedGetUserMatches.cancel()
+                            val deferredGetUserMatches = async { getUserMatches(playerIdA) }
+                            val matchListA = deferredGetUserMatches.await()
+                            deferredGetUserMatches.cancel()
 
 //                            Log.d(TAG, "matchTurn(), ONLINE_START, playerIdA: $playerIdA, countA: ${matchListA.size}")
 
@@ -7641,9 +7450,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
                         }
                         if (playerIdB != null) {
-                            val defferedGetUserMatches = async { getUserMatches(playerIdB) }
-                            val matchListB = defferedGetUserMatches.await()
-                            defferedGetUserMatches.cancel()
+                            val deferredGetUserMatches = async { getUserMatches(playerIdB) }
+                            val matchListB = deferredGetUserMatches.await()
+                            deferredGetUserMatches.cancel()
 
 //                            Log.d(TAG, "matchTurn(), ONLINE_START, playerIdB: $playerIdB, countB: ${matchListB.size}")
 
@@ -7673,7 +7482,9 @@ class MainActivity : Activity(), View.OnTouchListener {
             ONLINE_REMATCH_TURN -> {
                 //kotlin.KotlinNullPointerException
                 if (mMatchBaseData != null) {
-                    showAcceptRematchDialog(false, mMatchBaseData!!.nameA!!, mMatchBaseData!!.nameB!!)
+                    // kotlin.KotlinNullPointerException
+                    if (mMatchBaseData!!.nameA != null && mMatchBaseData!!.nameB != null)
+                        showAcceptRematchDialog(false, mMatchBaseData!!.nameA!!, mMatchBaseData!!.nameB!!)
                 }
             }
 
@@ -7690,13 +7501,13 @@ class MainActivity : Activity(), View.OnTouchListener {
                     result = ed.resultB.toLong()
 
                 var playerA = mPlayerName!!
-                var playerB = mOponentName ?: "???"
+                var playerB = mOpponentName ?: "???"
                 var epA = mPlayerEp
-                var epB = mOponentEp
+                var epB = mOpponentEp
                 if (mPlayerABC == "B") {
-                    playerA = mOponentName ?: "???"
+                    playerA = mOpponentName ?: "???"
                     playerB = mPlayerName!!
-                    epA = mOponentEp
+                    epA = mOpponentEp
                     epB = mPlayerEp
                 }
 
@@ -7724,9 +7535,9 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (matchUpdateData.onlineAction == ONLINE_START_CONTINUE && mMatchBaseData != null) {
                     playSound(4, 0)
                     if (mPlayerId == mMatchBaseData!!.playerIdA!!)
-                        setOponentData(mMatchBaseData!!.playerIdB!!, "B")
+                        setOpponentData(mMatchBaseData!!.playerIdB!!, "B")
                     else
-                        setOponentData(mMatchBaseData!!.playerIdA!!, "A")
+                        setOpponentData(mMatchBaseData!!.playerIdA!!, "A")
                 }
             }
 
@@ -7774,11 +7585,11 @@ class MainActivity : Activity(), View.OnTouchListener {
                     matchDataToDb(true, ONLINE_START_REMATCH)
                 } else {
                     //kotlin.KotlinNullPointerException
-                    if (mPlayerName != null && mOponentName != null) {
+                    if (mPlayerName != null && mOpponentName != null) {
                         var playerA = mPlayerName!!
-                        var playerB = mOponentName!!
+                        var playerB = mOpponentName!!
                         if (mPlayerABC == "B") {
-                            playerA = mOponentName!!
+                            playerA = mOpponentName!!
                             playerB = mPlayerName!!
                         }
                         showAcceptRematchDialog(true, playerA, playerB)
@@ -7788,10 +7599,10 @@ class MainActivity : Activity(), View.OnTouchListener {
 
             ONLINE_START_REMATCH -> {
                 ed.playerStart = runPrefs.getString("playerStart", "B")!![0]
-                if (mOponentABC!! == "A")
-                    setOponentData(mMatchBaseData!!.playerIdA!!, mOponentABC!!)
+                if (mOpponentABC!! == "A")
+                    setOpponentData(mMatchBaseData!!.playerIdA!!, mOpponentABC!!)
                 else
-                    setOponentData(mMatchBaseData!!.playerIdB!!, mOponentABC!!)
+                    setOpponentData(mMatchBaseData!!.playerIdB!!, mOpponentABC!!)
             }
 
             ONLINE_GAME_OVER -> {
@@ -7801,13 +7612,13 @@ class MainActivity : Activity(), View.OnTouchListener {
                 if (mPlayerABC == "B")
                     result = ed.resultB.toLong()
                 var playerA = mPlayerName!!
-                var playerB = mOponentName ?: ""
+                var playerB = mOpponentName ?: ""
                 var epA = mPlayerEp
-                var epB = mOponentEp
+                var epB = mOpponentEp
                 if (mPlayerABC == "B") {
-                    playerA = mOponentName ?: ""
+                    playerA = mOpponentName ?: ""
                     playerB = mPlayerName!!
-                    epA = mOponentEp
+                    epA = mOpponentEp
                     epB = mPlayerEp
                 }
 
@@ -7833,14 +7644,14 @@ class MainActivity : Activity(), View.OnTouchListener {
         var isRollOrHold = false
 
         val eDiced = matchUpdateData.diced!!
-        var eDiceModus = matchUpdateData.diceModus!!.toInt()
-        if (!eDiced && eDiceModus == 4)
-            eDiceModus = 1
+        var eDiceMode = matchUpdateData.diceModus!!.toInt()
+        if (!eDiced && eDiceMode == 4)
+            eDiceMode = 1
 
         val edi = runPrefs.edit()
 
         edi.putBoolean("isDiced", matchUpdateData.diced!!)
-        edi.putInt("diceModus", eDiceModus)
+        edi.putInt("diceModus", eDiceMode)
         edi.putInt("diceModusPrev", matchUpdateData.diceModusPrev!!.toInt())
         edi.putBoolean("isDouble1", matchUpdateData.double1!!)
         edi.putBoolean("isServed", matchUpdateData.served!!)
@@ -7961,26 +7772,26 @@ class MainActivity : Activity(), View.OnTouchListener {
         initOnline()
 
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedGetUserData = async { getUserData(inviterUserId) }
-            val user = defferedGetUserData.await()
-            defferedGetUserData.cancel()
+            val deferredGetUserData = async { getUserData(inviterUserId) }
+            val user = deferredGetUserData.await()
+            deferredGetUserData.cancel()
             if (user != null) {
-                mOponentId = user.uid ?: ""
+                mOpponentId = user.uid ?: ""
 
-                val defferedLeaderboardScore = async { getLeaderboardScore(mOponentId!!) }
-                mOponentEp = defferedLeaderboardScore.await()
-                defferedLeaderboardScore.cancel()
+                val deferredLeaderboardScore = async { getLeaderboardScore(mOpponentId!!) }
+                mOpponentEp = deferredLeaderboardScore.await()
+                deferredLeaderboardScore.cancel()
 
-                mOponentName = user.name ?: ""
-                mOponentABC = "A"
-                mOponentAppVersionCode = user.appVersionCode
+                mOpponentName = user.name ?: ""
+                mOpponentABC = "A"
+                mOpponentAppVersionCode = user.appVersionCode
                 mPlayerABC = "B"
 
                 ed.playerStart = 'A'
                 ed.playerToMove = 'A'
                 ed.selectedGridItem = -1
 
-                // update oponent single/double
+                // update opponent single/double
                 ed.isSingleGame = user.singleGame ?: true
                 val edi = prefs.edit()
                 edi.putBoolean("isSingleGame", ed.isSingleGame)
@@ -7989,15 +7800,15 @@ class MainActivity : Activity(), View.OnTouchListener {
                 updateUserStatus(playerId = mPlayerId, playing = true, singleGame = ed.isSingleGame)
 
                 initDiceArrays()
-                diceModus = 0// update oponent single/double
-                diceModusPrev = 0
+                diceMode = 0// update opponent single/double
+                diceModePrev = 0
                 isDiced = false
                 isServed = false
                 isServedDouble1 = false
                 isDouble1 = true
                 isDouble1Selected = false
 
-//                Log.i(TAG, "initMatch(), ed.isSingleGame: ${ed.isSingleGame}, mOponentName: $mOponentName, mOponentId $mOponentId")
+//                Log.i(TAG, "initMatch(), ed.isSingleGame: ${ed.isSingleGame}, mOpponentName: $mOpponentName, mOpponentId $mOpponentId")
 
                 matchDataToDb(true, ONLINE_INIT)
 
@@ -8012,14 +7823,15 @@ class MainActivity : Activity(), View.OnTouchListener {
             return
 
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedCancelMatch = async { cancelMatch(deleteMatch, matchId, playerIdA, playerIdB) }
-            val isRemoved = defferedCancelMatch.await()
-            defferedCancelMatch.cancel()
+            val deferredCancelMatch = async { cancelMatch(deleteMatch, matchId, playerIdA, playerIdB) }
+            val isRemoved = deferredCancelMatch.await()
+            deferredCancelMatch.cancel()
             if (isRemoved || !isRemoved) {
                 initOnline()
                 setNoActiveMatch()
 
 //                Log.i(TAG, "E initBoard(), setOnlineMessage()")
+
                 setOnlineMessage()
             }
         }
@@ -8027,10 +7839,10 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private fun startRematch() {
 
-//        Log.d(TAG, "startRematch(), mOponentEp: $mOponentEp")
+//        Log.d(TAG, "startRematch(), mOpponentEp: $mOpponentEp")
 
         GlobalScope.launch(Dispatchers.Main) {
-            if (mOponentId != null) {
+            if (mOpponentId != null) {
 
                 playSound(4, 0)
                 isOnlineActive = true
@@ -8055,8 +7867,8 @@ class MainActivity : Activity(), View.OnTouchListener {
                 ed.selectedGridItem = -1
 
                 initDiceArrays()
-                diceModus = 0
-                diceModusPrev = 0
+                diceMode = 0
+                diceModePrev = 0
                 isDiced = false
                 isServed = false
                 isServedDouble1 = false
@@ -8082,37 +7894,37 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
     }
 
-    private fun setOponentData(userId: String, userABC: String) {
+    private fun setOpponentData(userId: String, userABC: String) {
 
-//        Log.i(TAG, "setOponentData(), userId: $userId, userABC: $userABC")
+//        Log.i(TAG, "setOpponentData(), userId: $userId, userABC: $userABC")
 
         GlobalScope.launch(Dispatchers.Main) {
-            val defferedGetUserData = async { getUserData(userId) }
-            val user = defferedGetUserData.await()
-            defferedGetUserData.cancel()
+            val deferredGetUserData = async { getUserData(userId) }
+            val user = deferredGetUserData.await()
+            deferredGetUserData.cancel()
             if (user != null) {
-                mOponentId = user.uid ?: ""
+                mOpponentId = user.uid ?: ""
 
-                val defferedLeaderboardScore = async { getLeaderboardScore(mOponentId!!) }
-                mOponentEp = defferedLeaderboardScore.await()
-                defferedLeaderboardScore.cancel()
+                val deferredLeaderboardScore = async { getLeaderboardScore(mOpponentId!!) }
+                mOpponentEp = deferredLeaderboardScore.await()
+                deferredLeaderboardScore.cancel()
 
-//                Log.i(TAG, "setOponentData(), mOponentId: $mOponentId, mOponentEp: $mOponentEp")
+//                Log.i(TAG, "setOpponentData(), mOpponentId: $mOpponentId, mOpponentEp: $mOpponentEp")
 
-                mOponentName = user.name ?: ""
-                mOponentAppVersionCode = user.appVersionCode
+                mOpponentName = user.name ?: ""
+                mOpponentAppVersionCode = user.appVersionCode
                 when (userABC) {
                     "A" -> {
-                        mOponentABC = "A"
+                        mOpponentABC = "A"
                         mPlayerABC = "B"
                     }
                     "B" -> {
-                        mOponentABC = "B"
+                        mOpponentABC = "B"
                         mPlayerABC = "A"
                     }
                 }
 
-//                Log.i(TAG, "setOponentData(), mOponentName: $mOponentName, mOponentId: $mOponentId")
+//                Log.i(TAG, "setOpponentData(), mOpponentName: $mOpponentName, mOpponentId: $mOpponentId")
 
             }
         }
@@ -8120,9 +7932,9 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private fun getPausedStatus(): String {
         var status = ONLINE_ACTIVE
-        if (diceModus == 5 && isOnlineEntry)
+        if (diceMode == 5 && isOnlineEntry)
             status = ONLINE_ACTIVE_ENTRY
-        if (diceModus == 1 && diceModusPrev == 4)
+        if (diceMode == 1 && diceModePrev == 4)
             status = ONLINE_ACTIVE_TURN
         return status + PAUSED
     }
@@ -8131,17 +7943,26 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private fun startDialogCurrentMatch(matchID: String) {
 
+        val matchPlayers = dialogCurrentMatch.findViewById<TextView>(R.id.matchPlayers)
+        val matchPlayerEps = dialogCurrentMatch.findViewById<TextView>(R.id.matchPlayerEps)
+        val matchDate = dialogCurrentMatch.findViewById<TextView>(R.id.matchDate)
+        val matchTurn = dialogCurrentMatch.findViewById<TextView>(R.id.matchTurn)
+        val matchAccounting = dialogCurrentMatch.findViewById<TextView>(R.id.matchAccounting)
+        val currentMatchDelete = dialogCurrentMatch.findViewById<TextView>(R.id.currentMatchDelete)
+        val matchPause = dialogCurrentMatch.findViewById<TextView>(R.id.matchPause)
+        val matchUpdate = dialogCurrentMatch.findViewById<TextView>(R.id.matchUpdate)
+
         if (!checkConnectivity(false) || mMatchBaseData == null || mMatchUpdateData == null)
             return
 
         if (mMatchId != null) {
             GlobalScope.launch(Dispatchers.Main) {
-                val defferedGetMatchTimestamp = async { getMatchTimestamp(mMatchId!!) }
-                val timestampStr = defferedGetMatchTimestamp.await()
-                defferedGetMatchTimestamp.cancel()
-                val defferedTimestamp = async { getTimestampFromServer() }
-                val serverTimestampStr = defferedTimestamp.await()
-                defferedTimestamp.cancel()
+                val deferredGetMatchTimestamp = async { getMatchTimestamp(mMatchId!!) }
+                val timestampStr = deferredGetMatchTimestamp.await()
+                deferredGetMatchTimestamp.cancel()
+                val deferredTimestamp = async { getTimestampFromServer() }
+                val serverTimestampStr = deferredTimestamp.await()
+                deferredTimestamp.cancel()
 
                 if (timestampStr.isEmpty() || serverTimestampStr.isEmpty())
                     return@launch
@@ -8176,13 +7997,13 @@ class MainActivity : Activity(), View.OnTouchListener {
                         // data synchronization
                         if (mMatchId != null) {
                             if (mMatchBaseData == null) {
-                                val defferedGetMatchBaseData = async { getMatchBaseData(mMatchId!!) }
-                                mMatchBaseData = defferedGetMatchBaseData.await()
-                                defferedGetMatchBaseData.cancel()
+                                val deferredGetMatchBaseData = async { getMatchBaseData(mMatchId!!) }
+                                mMatchBaseData = deferredGetMatchBaseData.await()
+                                deferredGetMatchBaseData.cancel()
                             }
-                            val defferedGetMatchUpdateData = async { getMatchUpdateData(mMatchId!!) }
-                            val checkUpdateData = defferedGetMatchUpdateData.await()
-                            defferedGetMatchUpdateData.cancel()
+                            val deferredGetMatchUpdateData = async { getMatchUpdateData(mMatchId!!) }
+                            val checkUpdateData = deferredGetMatchUpdateData.await()
+                            deferredGetMatchUpdateData.cancel()
                             if (checkUpdateData != null) {
                                 mTimestampPre = timestamp
                                 Toast.makeText(applicationContext, getString(R.string.dataUpdate), Toast.LENGTH_LONG).show()
@@ -8199,26 +8020,22 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
         }
 
-        dialogCurrentMatch.matchPlayers.text = getPlayersFromMatch(matchID)
-        dialogCurrentMatch.matchPlayerEps.text = getPlayersEp()
-
-        dialogCurrentMatch.matchDate.text = mMatchBaseData!!.date
+        matchPlayers.text = getPlayersFromMatch(matchID)
+        matchPlayerEps.text = getPlayersEp()
+        matchDate.text = mMatchBaseData!!.date
         if (mMatchUpdateData!!.turnPlayerId == mPlayerId)
-            dialogCurrentMatch.matchTurn.text = getString(R.string.yourTurn)
+            matchTurn.text = getString(R.string.yourTurn)
         else
-            dialogCurrentMatch.matchTurn.text = getString(R.string.theirTurn, mOponentName)
-
-        dialogCurrentMatch.matchAccounting.setOnClickListener {
+            matchTurn.text = getString(R.string.theirTurn, mOpponentName)
+        matchAccounting.setOnClickListener {
             showAccountingDialog(ed.accounting)
             dialogCurrentMatch.dismiss()
         }
-
-        dialogCurrentMatch.currentMatchDelete.setOnClickListener {
+        currentMatchDelete.setOnClickListener {
             dialogCurrentMatch.dismiss()
             showDeleteMatchDialog()
         }
-
-        dialogCurrentMatch.matchPause.setOnClickListener {
+        matchPause.setOnClickListener {
             if (checkConnectivity(false)) {
                 if (isDoingTurn) {
                         matchDataToDb(false, getPausedStatus())
@@ -8230,8 +8047,7 @@ class MainActivity : Activity(), View.OnTouchListener {
             }
             dialogCurrentMatch.dismiss()
         }
-
-        dialogCurrentMatch.matchUpdate.setOnClickListener {
+        matchUpdate.setOnClickListener {
             if (checkConnectivity(false)) {
                 checkMatches()
             }
@@ -8255,13 +8071,13 @@ class MainActivity : Activity(), View.OnTouchListener {
 
     private fun getPlayersEp(): String {
 
-//        Log.d(TAG, "getPlayersEp(), mPlayerEp: $mPlayerEp, mOponentEp: $mOponentEp")
+//        Log.d(TAG, "getPlayersEp(), mPlayerEp: $mPlayerEp, mOpponentEp: $mOpponentEp")
 
-        return if (mOponentId != null && mPlayerEp >= 0 && mOponentEp >= 0) {
+        return if (mOpponentId != null && mPlayerEp >= 0 && mOpponentEp >= 0) {
             return  if (mPlayerABC == "A")
-                "$mPlayerEp    EP    $mOponentEp"
+                "$mPlayerEp    EP    $mOpponentEp"
             else
-                "$mOponentEp    EP    $mPlayerEp"
+                "$mOpponentEp    EP    $mPlayerEp"
         }
         else
             ""
@@ -8277,6 +8093,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     private fun getStringByLocal(context: Activity, id: Int, arg1: String?, arg2: String?, locale: String): String {
 
 //        Log.d(TAG, "getStringByLocal(), resource.id: $id, locale: $locale")
+
         return  if (locale == "" || Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
                     if (arg1 != "" && arg2 == null)
                         context.getString(id, arg1)
@@ -8444,7 +8261,7 @@ class MainActivity : Activity(), View.OnTouchListener {
     fun setRollHoldFromEngineCommands(command: String) {
         val strResult = command.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val diceTry = Integer.parseInt(strResult[2])
-        diceModus = diceTry + 1
+        diceMode = diceTry + 1
         val roll = strResult[3].replace("r:", "")
         val hold = strResult[4].replace("h:", "")
         for (j in diceRoll.indices) {
@@ -8526,8 +8343,6 @@ class MainActivity : Activity(), View.OnTouchListener {
     companion object {
 
         const val TAG = "MainActivity"
-        const val FILE_MANAGER_LOAD_REQUEST_CODE = 1
-        const val FILE_MANAGER_SAVE_REQUEST_CODE = 2
         const val PREFERENCES_REQUEST_CODE = 10
         const val NEW_GAME_REQUEST_CODE = 11
         const val INFO_REQUEST_CODE = 30
@@ -8574,7 +8389,7 @@ class MainActivity : Activity(), View.OnTouchListener {
         const val THEIR_TURN_PAUSED = "THEIR_TURN_PAUSED"
         const val CORRECTION = "_CORRECTION"
 
-        const val ONLINE_LEADERBORD_MAX = 300L
+        const val ONLINE_LEADERBORD_MAX = 500L
         const val ONLINE_LEADERBORD_MAX_PLAYERS = 100L
         const val ONLINE_LEADERBORD_BONUS_1 = 15L
         const val ONLINE_MAX_USER_MATCHES = 50
@@ -8588,7 +8403,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         const val MIN_BTN_DELAY = 300L
 
         const val ADS_EP_MIN = 3L
-        const val ADS_EP_MAX = 10L
+        const val ADS_EP_MAX = 5L
+        const val ADS_EP_1 = 1L
 
         const val RC_SIGN_IN = 10001
         const val MIN_VERSION_CODE = 55

@@ -1,6 +1,6 @@
 /*
     Escalero - An Android dice program.
-    Copyright (C) 2016-2020  Karl Schreiner, c4akarl@gmail.com
+    Copyright (C) 2016-2021  Karl Schreiner, c4akarl@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -23,22 +23,22 @@ import com.google.firebase.database.IgnoreExtraProperties
 @IgnoreExtraProperties
 data class MatchUpdateData(
 
-        var diced: Boolean? = false,
-        var diceDouble1: String? = "-----",
-        var diceHold: String? = "-----",
-        var diceHoldPrev: String? = "-----",
-        var diceModus: Long? = 0L,
-        var diceModusPrev: Long? = 0L,
-        var diceRoll: String? = "-----",
-        var diceRollPrev: String? = "-----",
-        var double1: Boolean? = false,
-        var gridItem: Long? = 0L,
-        var onlineAction: String? = "",
-        var playerToMove: String? = "A",
-        var position: String? = "",
-        var served: Boolean? = false,
-        var servedDouble1: Boolean? = false,
-        var starter: String? = "A",
-        var turnPlayerId: String? = ""          // firebase uid
+    var diced: Boolean? = false,
+    var diceDouble1: String? = "-----",
+    var diceHold: String? = "-----",
+    var diceHoldPrev: String? = "-----",
+    var diceModus: Long? = 0L,
+    var diceModusPrev: Long? = 0L,
+    var diceRoll: String? = "-----",
+    var diceRollPrev: String? = "-----",
+    var double1: Boolean? = false,
+    var gridItem: Long? = 0L,
+    var onlineAction: String? = "",
+    var playerToMove: String? = "A",
+    var position: String? = "",
+    var served: Boolean? = false,
+    var servedDouble1: Boolean? = false,
+    var starter: String? = "A",
+    var turnPlayerId: String? = ""          // firebase uid
 
 )

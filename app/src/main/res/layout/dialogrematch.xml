@@ -79,13 +79,13 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/margin_1"
         android:layout_marginBottom="@dimen/margin_1"
-        android:weightSum="9"
+        android:weightSum="16"
         android:orientation="horizontal" >
         <TextView
             android:id="@+id/playerNameA"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="4"
+            android:layout_weight="6"
             android:layout_marginLeft="0dp"
             android:textColor="@color/colorPlayerB"
             android:textSize="@dimen/text_size_16" />
@@ -93,7 +93,7 @@
             android:id="@+id/playerEpOldA"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:layout_marginRight="0dp"
             android:textColor="@color/colorPlayerB"
             android:textSize="@dimen/text_size_16" />
@@ -101,7 +101,7 @@
             android:id="@+id/playerResultA"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:layout_marginRight="0dp"
             android:gravity="right"
             android:textColor="@color/colorPlayerB"
@@ -119,7 +119,7 @@
             android:id="@+id/playerEpNewA"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
+            android:layout_weight="5"
             android:layout_marginRight="0dp"
             android:textColor="@color/colorPlayerB"
             android:textSize="@dimen/text_size_16" />
@@ -132,13 +132,13 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/margin_1"
         android:layout_marginBottom="@dimen/margin_1"
-        android:weightSum="9"
+        android:weightSum="16"
         android:orientation="horizontal" >
         <TextView
             android:id="@+id/playerNameB"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="4"
+            android:layout_weight="6"
             android:layout_marginLeft="0dp"
             android:textColor="@color/colorPlayerB"
             android:textSize="@dimen/text_size_16" />
@@ -146,7 +146,7 @@
             android:id="@+id/playerEpOldB"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:layout_marginRight="0dp"
             android:textColor="@color/colorPlayerB"
             android:textSize="@dimen/text_size_16" />
@@ -154,7 +154,7 @@
             android:id="@+id/playerResultB"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:layout_marginRight="0dp"
             android:gravity="right"
             android:textColor="@color/colorPlayerB"
@@ -172,7 +172,7 @@
             android:id="@+id/playerEpNewB"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
+            android:layout_weight="5"
             android:layout_marginRight="0dp"
             android:textColor="@color/colorPlayerB"
             android:textSize="@dimen/text_size_16" />
@@ -184,8 +184,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="@dimen/paddingLeft_radioButton"
-        android:layout_marginBottom="@dimen/paddingLeft_radioButton"
+        android:layout_marginTop="@dimen/button_margin"
+        android:layout_marginBottom="@dimen/button_margin"
         android:textColor="@color/colorPlayerB"
         android:textSize="@dimen/text_size_16"
         android:text="@string/rematch" />

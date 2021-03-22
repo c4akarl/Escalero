@@ -1,6 +1,6 @@
 /*
     Escalero - An Android dice program.
-    Copyright (C) 2016-2020  Karl Schreiner, c4akarl@gmail.com
+    Copyright (C) 2016-2021  Karl Schreiner, c4akarl@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,11 +28,8 @@ import android.graphics.Paint
 import android.os.Bundle
 import android.text.Editable
 import android.view.View
-import android.widget.CheckBox
-import android.widget.RadioButton
-import android.widget.Toast
+import android.widget.*
 import androidx.core.content.ContextCompat
-import kotlinx.android.synthetic.main.prefs.*
 
 class Preferences : Activity() {
 
@@ -44,9 +41,65 @@ class Preferences : Activity() {
     private var diceSize = 2   // 1 small, 2 medium, 3 large
     private var icons = 1
 
+    private lateinit var cbLogging: CheckBox
+    private lateinit var cbMainDialog: CheckBox
+    private lateinit var diceIcon1: ImageView
+    private lateinit var diceIcon2: ImageView
+    private lateinit var diceIcon3: ImageView
+    private lateinit var col1: TextView
+    private lateinit var col2: TextView
+    private lateinit var col3: TextView
+    private lateinit var bon: TextView
+    private lateinit var multiplier: TextView
+    private lateinit var unit: TextView
+    private lateinit var bonusServed: TextView
+    private lateinit var bonusServedGrande: TextView
+    private lateinit var cbSummation: CheckBox
+    private lateinit var cbNewGame: CheckBox
+    private lateinit var cbSounds: CheckBox
+    private lateinit var cbFlipScreen: CheckBox
+    private lateinit var cbAdvertising: CheckBox
+    private lateinit var rbDiceManuel: RadioButton
+    private lateinit var rbDiceAutomatic: RadioButton
+    private lateinit var rbSizeSmall: RadioButton
+    private lateinit var rbSizeMedium: RadioButton
+    private lateinit var rbSizeLarge: RadioButton
+    private lateinit var rbAccountingPlayer: RadioButton
+    private lateinit var rbAccountingColumns: RadioButton
+    private lateinit var rbDimension3D: RadioButton
+    private lateinit var rbDimension2D: RadioButton
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.prefs)
+        cbLogging = findViewById<View>(R.id.cbLogging) as CheckBox
+        cbMainDialog = findViewById<View>(R.id.cbMainDialog) as CheckBox
+        diceIcon1 = findViewById<View>(R.id.dice_icon_1) as ImageView
+        diceIcon2 = findViewById<View>(R.id.dice_icon_2) as ImageView
+        diceIcon3 = findViewById<View>(R.id.dice_icon_3) as ImageView
+        col1 = findViewById<View>(R.id.col1) as TextView
+        col2 = findViewById<View>(R.id.col2) as TextView
+        col3 = findViewById<View>(R.id.col3) as TextView
+        bon = findViewById<View>(R.id.bon) as TextView
+        multiplier = findViewById<View>(R.id.multiplier) as TextView
+        unit = findViewById<View>(R.id.unit) as TextView
+        bonusServed = findViewById<View>(R.id.bonusServed) as TextView
+        bonusServedGrande = findViewById<View>(R.id.bonusServedGrande) as TextView
+        cbSummation = findViewById<View>(R.id.cbSummation) as CheckBox
+        cbNewGame = findViewById<View>(R.id.cbNewGame) as CheckBox
+        cbSounds = findViewById<View>(R.id.cbSounds) as CheckBox
+        cbFlipScreen = findViewById<View>(R.id.cbFlipScreen) as CheckBox
+        cbAdvertising = findViewById<View>(R.id.cbAdvertising) as CheckBox
+        rbDiceManuel = findViewById<View>(R.id.rbDiceManuel) as RadioButton
+        rbDiceAutomatic = findViewById<View>(R.id.rbDiceAutomatic) as RadioButton
+        rbSizeSmall = findViewById<View>(R.id.rbSizeSmall) as RadioButton
+        rbSizeMedium = findViewById<View>(R.id.rbSizeMedium) as RadioButton
+        rbSizeLarge = findViewById<View>(R.id.rbSizeLarge) as RadioButton
+        rbAccountingPlayer = findViewById<View>(R.id.rbAccountingPlayer) as RadioButton
+        rbAccountingColumns = findViewById<View>(R.id.rbAccountingColumns) as RadioButton
+        rbDimension3D = findViewById<View>(R.id.rbDimension3D) as RadioButton
+        rbDimension2D = findViewById<View>(R.id.rbDimension2D) as RadioButton
+
         prefs = getSharedPreferences("prefs", 0)
 
         isPlayOnline = prefs.getBoolean("playOnline", true)
@@ -58,11 +111,11 @@ class Preferences : Activity() {
         diceSize = prefs.getInt("diceSize", 2)
         icons = prefs.getInt("icons", 1)
         if (prefs.getInt("icons", 1) == 1)
-            dice_icon_1.setImageBitmap(getHoldBitmap(R.drawable._1_4, true))
+            diceIcon1.setImageBitmap(getHoldBitmap(R.drawable._1_4, true))
         if (prefs.getInt("icons", 1) == 2)
-            dice_icon_2.setImageBitmap(getHoldBitmap(R.drawable._2_4, true))
+            diceIcon2.setImageBitmap(getHoldBitmap(R.drawable._2_4, true))
         if (prefs.getInt("icons", 1) == 3)
-            dice_icon_3.setImageBitmap(getHoldBitmap(R.drawable._3_4, true))
+            diceIcon3.setImageBitmap(getHoldBitmap(R.drawable._3_4, true))
         col1.setText(String.format("%d", prefs.getInt("pointsCol1", 1)))
         col2.setText(String.format("%d", prefs.getInt("pointsCol2", 2)))
         col3.setText(String.format("%d", prefs.getInt("pointsCol3", 4)))
@@ -159,21 +212,21 @@ class Preferences : Activity() {
             }
             R.id.dice_icon_1 -> {
                 icons = 1
-                dice_icon_1.setImageBitmap(getHoldBitmap(R.drawable._1_4, true))
-                dice_icon_2.setImageBitmap(getHoldBitmap(R.drawable._2_4, false))
-                dice_icon_3.setImageBitmap(getHoldBitmap(R.drawable._3_4, false))
+                diceIcon1.setImageBitmap(getHoldBitmap(R.drawable._1_4, true))
+                diceIcon2.setImageBitmap(getHoldBitmap(R.drawable._2_4, false))
+                diceIcon3.setImageBitmap(getHoldBitmap(R.drawable._3_4, false))
             }
             R.id.dice_icon_2 -> {
                 icons = 2
-                dice_icon_2.setImageBitmap(getHoldBitmap(R.drawable._2_4, true))
-                dice_icon_1.setImageBitmap(getHoldBitmap(R.drawable._1_4, false))
-                dice_icon_3.setImageBitmap(getHoldBitmap(R.drawable._3_4, false))
+                diceIcon2.setImageBitmap(getHoldBitmap(R.drawable._2_4, true))
+                diceIcon1.setImageBitmap(getHoldBitmap(R.drawable._1_4, false))
+                diceIcon3.setImageBitmap(getHoldBitmap(R.drawable._3_4, false))
             }
             R.id.dice_icon_3 -> {
                 icons = 3
-                dice_icon_3.setImageBitmap(getHoldBitmap(R.drawable._3_4, true))
-                dice_icon_1.setImageBitmap(getHoldBitmap(R.drawable._1_4, false))
-                dice_icon_2.setImageBitmap(getHoldBitmap(R.drawable._2_4, false))
+                diceIcon3.setImageBitmap(getHoldBitmap(R.drawable._3_4, true))
+                diceIcon1.setImageBitmap(getHoldBitmap(R.drawable._1_4, false))
+                diceIcon2.setImageBitmap(getHoldBitmap(R.drawable._2_4, false))
             }
         }
     }
